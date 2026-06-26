@@ -1,10 +1,10 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="zh-CN">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>难度曲线动态计算器</title>
-  <link rel="stylesheet" href="./styles.css?v=20260625-25" />
+  <link rel="stylesheet" href="./styles.css?v=20260626-1" />
 </head>
 <body>
   <div class="app-shell">
@@ -136,7 +136,7 @@
             <label class="legend-toggle"><input id="showFinal" type="checkbox" checked /><span class="swatch final"></span><span>最终输出</span></label>
           </div>
         </div>
-        <p class="muted section-help">基础增长：只看对数公式本身的底盘走势，对应 Excel 里的基础增长公式参数；周期修正：基础增长再叠加 50 关周期值，对应 Excel 的周期规划；Buff体感：按 Buff 占比和难度系数折算后的玩家体感，对应 Excel 的 Buff 实际分布；最终输出：再经过特殊关、前 50 关手调和取整规则后的最终难度，对应 Excel 的最终曲线结果。</p>
+        <p class="muted section-help">基础增长：只调用左侧“基础增长公式（前半部分）”的底盘走势；周期修正：完整基础公式再叠加 50 关周期值，对应 Excel 的周期规划；Buff体感：按 Buff 占比和难度系数折算后的玩家体感，对应 Excel 的 Buff 实际分布；最终输出：再经过特殊关、前 50 关手调和取整规则后的最终难度，对应 Excel 的最终曲线结果。</p>
         <div class="chart-wrap">
           <canvas id="curveCanvas" width="1200" height="420"></canvas>
         </div>
@@ -155,7 +155,7 @@
             <button id="exportFocusBtn" type="button" class="secondary">导出数据</button>
           </div>
         </div>
-        <p class="muted section-help">关卡：当前查看的关卡编号；基础增长：只看基础公式算出的难度；周期修正：叠加周期后的难度；特殊关后：再经过引导关、金币关等规则修正后的难度；Buff体感：考虑玩家 buff 状态后的体感难度；最终难度：按取整规则得到的最终结果；近10关 / 近20关 / 近50关 / 近100关：从当前关往前看的滚动平均难度。</p>
+        <p class="muted section-help">关卡：当前查看的关卡编号；基础增长：只调用“基础增长公式（前半部分）”算出的难度；周期修正：叠加周期后的难度；特殊关后：再经过引导关、金币关等规则修正后的难度；Buff体感：考虑玩家 buff 状态后的体感难度；最终难度：按取整规则得到的最终结果；近10关 / 近20关 / 近50关 / 近100关：从当前关往前看的滚动平均难度。</p>
         <div class="table-wrap">
           <table>
             <thead>
@@ -213,7 +213,7 @@
     </main>
   </div>
 
-  <script src="./app.js?v=20260625-25"></script>
+  <script src="./app.js?v=20260626-1"></script>
 </body>
 </html>
 

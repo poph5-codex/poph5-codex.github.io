@@ -1,4 +1,4 @@
-﻿const DATA_VERSION = '20260625-25';
+const DATA_VERSION = '20260626-1';
 
 const state = {
   seeds: {},
@@ -157,6 +157,7 @@ function computeModel(config) {
 
   const rows = [];
   for (let levelId = 1; levelId <= levelCount; levelId += 1) {
+    const baseGrowth = evaluateGrowthFormula(config.growth.formulaNumerator || buildGrowthFormula(config.growth), levelId);
     const growth = evaluateGrowthFormula(buildGrowthFormula(config.growth), levelId);
     const cycleFactor = getCycleFactor(levelId, config.cycle);
     const cycleValue = growth * cycleFactor;
@@ -192,7 +193,8 @@ function computeModel(config) {
 
     rows.push({
       levelId,
-      growth,
+      growth: baseGrowth,
+      formulaGrowth: growth,
       cycleFactor,
       cycleValue,
       adjusted,
