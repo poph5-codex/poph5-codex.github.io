@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="zh-CN">
 <head>
   <meta charset="utf-8" />
@@ -42,11 +42,11 @@
           </label>
           <div class="formula-divider" aria-hidden="true">/</div>
           <label class="formula-part formula-denominator">
-            <span>除数</span>
+            <span>50关均值</span>
             <input id="growthFormulaDenominator" type="text" inputmode="decimal" autocomplete="off" spellcheck="false" maxlength="3" />
           </label>
         </div>
-        <p class="muted formula-tip">可用变量：<code>x</code> 代表关卡 ID。前半部分可用函数：<code>ln()</code>、<code>log()</code>、<code>sqrt()</code>、<code>pow(a,b)</code>、<code>abs()</code>。除数固定在右侧。</p>
+        <p class="muted formula-tip">可用变量：<code>x</code> 代表关卡 ID。前半部分可用函数：<code>ln()</code>、<code>log()</code>、<code>sqrt()</code>、<code>pow(a,b)</code>、<code>abs()</code>。50关均值固定在右侧。</p>
       </section>
 
       <section class="panel">
@@ -59,7 +59,7 @@
           </div>
         </div>
         <div class="section-head mini-head">
-          <h2>50 关周期逐关值</h2>
+          <h2>逐关难度</h2>
         </div>
         <div class="cycle-grid" id="cycleValues"></div>
       </section>
@@ -131,12 +131,10 @@
           <h2>曲线总览</h2>
           <div class="legend" id="curveLegend">
             <label class="legend-toggle"><input id="showGrowth" type="checkbox" checked /><span class="swatch growth"></span><span>基础增长</span></label>
-            <label class="legend-toggle"><input id="showCycle" type="checkbox" checked /><span class="swatch cycle"></span><span>周期修正</span></label>
-            <label class="legend-toggle"><input id="showBuffed" type="checkbox" checked /><span class="swatch buffed"></span><span>Buff体感</span></label>
             <label class="legend-toggle"><input id="showFinal" type="checkbox" checked /><span class="swatch final"></span><span>最终输出</span></label>
           </div>
         </div>
-        <p class="muted section-help">基础增长：只调用左侧“基础增长公式（前半部分）”的底盘走势；周期修正：完整基础公式再叠加 50 关周期值，对应 Excel 的周期规划；Buff体感：按 Buff 占比和难度系数折算后的玩家体感，对应 Excel 的 Buff 实际分布；最终输出：再经过特殊关、前 50 关手调和取整规则后的最终难度，对应 Excel 的最终曲线结果。</p>
+        <p class="muted section-help">基础增长：只调用左侧“基础增长公式（前半部分）”的底盘走势；最终输出：再经过特殊关、前 50 关手调和取整规则后的最终难度，对应 Excel 的最终曲线结果。</p>
         <div class="chart-wrap">
           <canvas id="curveCanvas" width="1200" height="420"></canvas>
         </div>
@@ -196,18 +194,16 @@
       <section class="panel">
         <div class="section-head">
           <h2>前 50 关人工微调</h2>
-          <p class="muted">这里保留参考模型的前期手调习惯，适合按项目体感局部压或抬。</p>
+          <p class="muted manual-tune-note">这里保留参考模型的前期手调习惯，适合按项目体感局部压或抬。</p>
         </div>
-        <div class="table-wrap compact-table">
-          <table>
-            <thead>
-              <tr>
-                <th>关卡</th>
-                <th>覆盖难度</th>
-              </tr>
-            </thead>
-            <tbody id="overrideTable"></tbody>
-          </table>
+        <div class="override-scroll compact-table">
+          <div class="override-grid-head">
+            <span>关卡</span>
+            <span>关卡难度</span>
+            <span>关卡</span>
+            <span>关卡难度</span>
+          </div>
+          <div class="override-grid" id="overrideTable"></div>
         </div>
       </section>
     </main>
