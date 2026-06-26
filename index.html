@@ -1,0 +1,236 @@
+﻿<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>难度曲线动态计算器</title>
+  <link rel="stylesheet" href="./styles.css?v=20260625-24" />
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div id="protocolWarning" class="panel warning" hidden>
+        <strong>当前是直接打开本地文件。</strong>
+        <p>请改用本地服务地址打开，例如 <code>http://127.0.0.1:8765/product/app/index.html</code>，否则图表和动态结果可能不会加载。</p>
+      </div>
+
+      <div class="panel sticky">
+        <h1>难度曲线动态计算器</h1>
+        <div class="field-group compact">
+          <label for="dataSource">数据源</label>
+          <select id="dataSource">
+            <option value="default">SH01</option>
+            <option value="reference">PopH5</option>
+          </select>
+        </div>
+
+        <div class="toolbar">
+          <button id="resetBtn" class="secondary">恢复原版数据</button>
+          <button id="exportBtn">导出当前配置</button>
+        </div>
+      </div>
+
+      <section class="panel">
+        <h2>基础增长</h2>
+<div class="grid two">
+          <label>关卡总数<input id="levelCount" type="number" min="50" max="5000" step="10" /></label>
+        </div>
+        <label>基础增长公式<textarea id="growthFormula" rows="3"></textarea></label>
+        <p class="muted formula-tip">可用变量：<code>x</code> 代表关卡 ID。可用函数：<code>ln()</code>、<code>log()</code>、<code>sqrt()</code>、<code>pow(a,b)</code>、<code>abs()</code>。</p>
+      </section>
+
+      <section class="panel">
+        <h2>50关小循环难度</h2>
+        <div class="grid two cycle-summary">
+          <label>周期长度<input id="cycleLength" type="number" min="10" max="200" step="5" /></label>
+          <div class="readonly-metric">
+            <span>50关难度均值</span>
+            <strong id="cycleAverageValue">-</strong>
+          </div>
+        </div>
+        <div class="section-head mini-head">
+          <h2>50 关周期逐关值</h2>
+        </div>
+        <div class="cycle-grid" id="cycleValues"></div>
+      </section>
+
+      <section class="panel">
+        <h2>特殊关</h2>
+<div class="grid two">
+          <label>引导关难度<input id="guideDifficulty" type="number" min="0.5" max="5" step="0.1" /></label>
+          <label>金币关难度<input id="coinDifficulty" type="number" min="0.5" max="5" step="0.1" /></label>
+          <label>尾号关封顶<input id="tailCapMax" type="number" min="0.5" max="10" step="0.1" /></label>
+          <label>尾号窗口<input id="tailCapWindow" type="number" min="1" max="50" step="1" /></label>
+        </div>
+        <label class="switch"><input id="tailCapEnabled" type="checkbox" />启用尾号关封顶</label>
+        <div class="grid two">
+          <label class="switch"><input id="streakEnabled" type="checkbox" />启用连胜额外系数</label>
+          <label>连胜额外系数<input id="streakExtraDefault" type="number" min="0.1" step="0.05" /></label>
+        </div>
+        <label>引导关列表<textarea id="guideLevels" rows="3"></textarea></label>
+        <label>金币关列表<textarea id="coinLevels" rows="2"></textarea></label>
+      </section>
+
+      <section class="panel">
+        <h2>Buff 模型</h2>
+        <div class="buff-grid" id="buffGrid"></div>
+      </section>
+
+      <section class="panel">
+        <h2>难度取整规则</h2>
+<p class="muted formula-tip">难度计算结果小于 1 时，按 1 处理。</p>
+        <p class="muted formula-tip">最终难度统一只保留到小数点后 1 位。</p>
+        <div class="grid two">
+          <label>难度小于 x，难度不变<input id="halfStepThreshold" type="number" step="0.1" /></label>
+          <label>难度大于 y，难度取整<input id="integerThreshold" type="number" step="0.1" /></label>
+          <label>难度介于 x 与 y 之间，难度取整或 0.5<input id="halfStep" type="number" min="0.1" step="0.1" /></label>
+        </div>
+      </section>
+    </aside>
+
+    <main class="content">
+      <section class="panel algorithm-note">
+        <div class="section-head">
+          <h2>算法说明</h2>
+        </div>
+        <ol>
+          <li>先用基础增长公式，根据关卡号算出基础难度。</li>
+          <li>再乘以 50 关周期逐关值，形成关卡节奏波动。</li>
+          <li>然后套用特殊关规则，例如引导关、金币关、尾号关封顶、前 50 关手调。</li>
+          <li>Buff 体感用于估算玩家带 Buff 后看到的难度，不直接等同最终输出。</li>
+          <li>最终难度会再经过取整规则，得到表格和曲线里的最终结果。</li>
+        </ol>
+        <p class="muted formula-line">简化理解：最终难度 = 取整规则(特殊关修正(基础增长公式 × 周期逐关值))</p>
+      </section>
+
+      <section class="hero">
+        <div>
+          <p class="eyebrow">当前方案概览</p>
+          <h2 id="projectTitle">项目调试面板</h2>
+        </div>
+        <div class="hero-stats" id="heroStats"></div>
+      </section>
+
+      <section id="runtimeWarning" class="panel warning" hidden>
+        <strong>当前结果没有算出来。</strong>
+        <p id="runtimeWarningText"></p>
+      </section>
+
+      <section class="panel">
+        <div class="section-head">
+          <h2>曲线总览</h2>
+          <div class="legend" id="curveLegend">
+            <label class="legend-toggle"><input id="showGrowth" type="checkbox" checked /><span class="swatch growth"></span><span>基础增长</span></label>
+            <label class="legend-toggle"><input id="showCycle" type="checkbox" checked /><span class="swatch cycle"></span><span>周期修正</span></label>
+            <label class="legend-toggle"><input id="showBuffed" type="checkbox" checked /><span class="swatch buffed"></span><span>Buff体感</span></label>
+            <label class="legend-toggle"><input id="showFinal" type="checkbox" checked /><span class="swatch final"></span><span>最终输出</span></label>
+          </div>
+        </div>
+        <p class="muted section-help">基础增长：只看对数公式本身的底盘走势，对应 Excel 里的基础增长公式参数；周期修正：基础增长再叠加 50 关周期值，对应 Excel 的周期规划；Buff体感：按 Buff 占比和难度系数折算后的玩家体感，对应 Excel 的 Buff 实际分布；最终输出：再经过特殊关、前 50 关手调和取整规则后的最终难度，对应 Excel 的最终曲线结果。</p>
+        <div class="chart-wrap">
+          <canvas id="curveCanvas" width="1200" height="420"></canvas>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="section-head">
+          <h2>分段观察</h2>
+          <div class="range-tools">
+            <label>开始关
+              <input id="focusStart" type="number" min="1" step="1" />
+            </label>
+            <label>结束关
+              <input id="focusEnd" type="number" min="1" step="1" />
+            </label>
+            <button id="exportFocusBtn" type="button" class="secondary">导出数据</button>
+          </div>
+        </div>
+        <p class="muted section-help">关卡：当前查看的关卡编号；基础增长：只看基础公式算出的难度；周期修正：叠加周期后的难度；特殊关后：再经过引导关、金币关等规则修正后的难度；Buff体感：考虑玩家 buff 状态后的体感难度；最终难度：按取整规则得到的最终结果；近10关 / 近20关 / 近50关 / 近100关：从当前关往前看的滚动平均难度。</p>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>关卡</th>
+                <th>基础增长</th>
+                <th>周期修正</th>
+                <th>特殊关后</th>
+                <th>Buff体感</th>
+                <th>最终难度</th>
+                <th>近10关</th>
+                <th>近20关</th>
+                <th>近50关</th>
+                <th>近100关</th>
+              </tr>
+            </thead>
+            <tbody id="focusTable"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="section-head">
+          <h2>趋势-近x关均难度</h2>
+          <div class="legend compact-legend" id="trendLegend">
+            <label class="legend-toggle"><input id="showAvg10" type="checkbox" checked /><span class="swatch avg10"></span><span>近10关</span></label>
+            <label class="legend-toggle"><input id="showAvg20" type="checkbox" checked /><span class="swatch avg20"></span><span>近20关</span></label>
+            <label class="legend-toggle"><input id="showAvg50" type="checkbox" checked /><span class="swatch avg50"></span><span>近50关</span></label>
+            <label class="legend-toggle"><input id="showAvg100" type="checkbox" checked /><span class="swatch avg100"></span><span>近100关</span></label>
+          </div>
+        </div>
+        <p class="muted section-help">这里看的是当前所选区间内，滚动平均难度的变化趋势。它更适合判断一段内容是不是整体偏抬、偏压，或者中间有突然跳变。</p>
+        <div class="chart-wrap">
+          <canvas id="trendCanvas" width="1200" height="320"></canvas>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="section-head">
+          <h2>前 50 关人工微调</h2>
+          <p class="muted">这里保留参考模型的前期手调习惯，适合按项目体感局部压或抬。</p>
+        </div>
+        <div class="table-wrap compact-table">
+          <table>
+            <thead>
+              <tr>
+                <th>关卡</th>
+                <th>覆盖难度</th>
+              </tr>
+            </thead>
+            <tbody id="overrideTable"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="./app.js?v=20260625-24"></script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

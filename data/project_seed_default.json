@@ -1,0 +1,381 @@
+﻿{
+    "meta":  {
+                 "projectName":  "SH01",
+                 "description":  "鐢ㄤ簬鍦ㄥ弬鑰冩ā鍨嬪熀纭€涓婅皟璇曟垜鏂归」鐩毦搴︽洸绾跨殑榛樿杈撳叆妯℃澘"
+             },
+    "levelCount":  3000,
+    "growth":  {
+                   "formula":  "((1.08 * ln(x + 78)) - 3.8) / 2"
+               },
+    "rounding":  {
+                     "halfStepThreshold":  1.9,
+                     "integerThreshold":  5,
+                     "halfStep":  0.5
+                 },
+    "cycle":  {
+                  "length":  50,
+                  "strength":  1,
+                  "values":  [
+                                 1.2,
+                                 1.5,
+                                 2,
+                                 2.5,
+                                 3,
+                                 1.5,
+                                 2.5,
+                                 1.5,
+                                 2.5,
+                                 1.5,
+                                 1.2,
+                                 1.5,
+                                 2,
+                                 2.5,
+                                 3,
+                                 1.5,
+                                 2.5,
+                                 1.5,
+                                 4,
+                                 1.5,
+                                 1.2,
+                                 1.5,
+                                 2,
+                                 2.5,
+                                 1.5,
+                                 1.5,
+                                 2.5,
+                                 1.5,
+                                 4.5,
+                                 1.5,
+                                 1.2,
+                                 1.5,
+                                 2,
+                                 2.5,
+                                 3,
+                                 1.5,
+                                 2.5,
+                                 1.5,
+                                 4,
+                                 1.5,
+                                 1.2,
+                                 1.5,
+                                 2,
+                                 2.5,
+                                 3,
+                                 1.5,
+                                 2.5,
+                                 1.5,
+                                 5,
+                                 1.5
+                             ]
+              },
+    "specialRules":  {
+                         "guideLevels":  [
+                                             1,
+                                             4,
+                                             7,
+                                             11,
+                                             16,
+                                             21,
+                                             31,
+                                             41,
+                                             51,
+                                             61,
+                                             71,
+                                             81,
+                                             91,
+                                             101,
+                                             121,
+                                             141,
+                                             161,
+                                             181,
+                                             201,
+                                             231,
+                                             261,
+                                             301,
+                                             351,
+                                             401,
+                                             451,
+                                             501,
+                                             551,
+                                             601,
+                                             651,
+                                             701,
+                                             751,
+                                             801,
+                                             851,
+                                             901,
+                                             951,
+                                             1001,
+                                             1101,
+                                             1201,
+                                             1301,
+                                             1401,
+                                             1501,
+                                             1601,
+                                             1701,
+                                             1801,
+                                             1901,
+                                             2001
+                                         ],
+                         "coinLevels":  [
+                                            20,
+                                            50,
+                                            70,
+                                            100,
+                                            130,
+                                            160,
+                                            200,
+                                            250,
+                                            300,
+                                            350,
+                                            400,
+                                            450,
+                                            500,
+                                            600,
+                                            700,
+                                            800,
+                                            900,
+                                            1000,
+                                            1100,
+                                            1200,
+                                            1300,
+                                            1400,
+                                            1500,
+                                            1600,
+                                            1700,
+                                            1800,
+                                            1900,
+                                            2000,
+                                            2200
+                                        ],
+                         "guideDifficulty":  1,
+                         "coinDifficulty":  1,
+                         "tailCapEnabled":  true,
+                         "tailCapWindow":  11,
+                         "tailCapDigit":  1,
+                         "tailCapMax":  2,
+                         "streakEnabled":  false,
+                         "streakExtraDefault":  1
+                     },
+    "buffModel":  {
+                      "weights":  [
+                                      0.598,
+                                      0.156,
+                                      0.065,
+                                      0.036,
+                                      0.025,
+                                      0.12
+                                  ],
+                      "decay":  [
+                                    1,
+                                    0.92,
+                                    0.84,
+                                    0.78,
+                                    0.72,
+                                    0.66
+                                ],
+                      "fullBuffBaseShare":  0.1
+                  },
+    "manualOverrides":  [
+                            {
+                                "levelId":  1,
+                                "difficulty":  1
+                            },
+                            {
+                                "levelId":  2,
+                                "difficulty":  1
+                            },
+                            {
+                                "levelId":  3,
+                                "difficulty":  1
+                            },
+                            {
+                                "levelId":  4,
+                                "difficulty":  1
+                            },
+                            {
+                                "levelId":  5,
+                                "difficulty":  1.1
+                            },
+                            {
+                                "levelId":  6,
+                                "difficulty":  1
+                            },
+                            {
+                                "levelId":  7,
+                                "difficulty":  1.1
+                            },
+                            {
+                                "levelId":  8,
+                                "difficulty":  1
+                            },
+                            {
+                                "levelId":  9,
+                                "difficulty":  1.1
+                            },
+                            {
+                                "levelId":  10,
+                                "difficulty":  1
+                            },
+                            {
+                                "levelId":  11,
+                                "difficulty":  1
+                            },
+                            {
+                                "levelId":  12,
+                                "difficulty":  1.4
+                            },
+                            {
+                                "levelId":  13,
+                                "difficulty":  1
+                            },
+                            {
+                                "levelId":  14,
+                                "difficulty":  1
+                            },
+                            {
+                                "levelId":  15,
+                                "difficulty":  1.5
+                            },
+                            {
+                                "levelId":  16,
+                                "difficulty":  1
+                            },
+                            {
+                                "levelId":  17,
+                                "difficulty":  1.3
+                            },
+                            {
+                                "levelId":  18,
+                                "difficulty":  1
+                            },
+                            {
+                                "levelId":  19,
+                                "difficulty":  1.8
+                            },
+                            {
+                                "levelId":  20,
+                                "difficulty":  1
+                            },
+                            {
+                                "levelId":  21,
+                                "difficulty":  1.1
+                            },
+                            {
+                                "levelId":  22,
+                                "difficulty":  1.2
+                            },
+                            {
+                                "levelId":  23,
+                                "difficulty":  1.1
+                            },
+                            {
+                                "levelId":  24,
+                                "difficulty":  1
+                            },
+                            {
+                                "levelId":  25,
+                                "difficulty":  1.5
+                            },
+                            {
+                                "levelId":  26,
+                                "difficulty":  1
+                            },
+                            {
+                                "levelId":  27,
+                                "difficulty":  1.3
+                            },
+                            {
+                                "levelId":  28,
+                                "difficulty":  1
+                            },
+                            {
+                                "levelId":  29,
+                                "difficulty":  2
+                            },
+                            {
+                                "levelId":  30,
+                                "difficulty":  1
+                            },
+                            {
+                                "levelId":  31,
+                                "difficulty":  1.1
+                            },
+                            {
+                                "levelId":  32,
+                                "difficulty":  1.2
+                            },
+                            {
+                                "levelId":  33,
+                                "difficulty":  1.1
+                            },
+                            {
+                                "levelId":  34,
+                                "difficulty":  1.4
+                            },
+                            {
+                                "levelId":  35,
+                                "difficulty":  1.7
+                            },
+                            {
+                                "levelId":  36,
+                                "difficulty":  1
+                            },
+                            {
+                                "levelId":  37,
+                                "difficulty":  1.655658373
+                            },
+                            {
+                                "levelId":  38,
+                                "difficulty":  1.000408055
+                            },
+                            {
+                                "levelId":  39,
+                                "difficulty":  2.5
+                            },
+                            {
+                                "levelId":  40,
+                                "difficulty":  1.014254546
+                            },
+                            {
+                                "levelId":  41,
+                                "difficulty":  1
+                            },
+                            {
+                                "levelId":  42,
+                                "difficulty":  1.1
+                            },
+                            {
+                                "levelId":  43,
+                                "difficulty":  1.379453789
+                            },
+                            {
+                                "levelId":  44,
+                                "difficulty":  1.73542841
+                            },
+                            {
+                                "levelId":  45,
+                                "difficulty":  2
+                            },
+                            {
+                                "levelId":  46,
+                                "difficulty":  1.1
+                            },
+                            {
+                                "levelId":  47,
+                                "difficulty":  1.768223545
+                            },
+                            {
+                                "levelId":  48,
+                                "difficulty":  1.1
+                            },
+                            {
+                                "levelId":  49,
+                                "difficulty":  3.5
+                            },
+                            {
+                                "levelId":  50,
+                                "difficulty":  1
+                            }
+                        ]
+}
