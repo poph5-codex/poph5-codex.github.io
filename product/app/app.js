@@ -1,11 +1,11 @@
-﻿const DATA_VERSION = '20260626-1';
+﻿const DATA_VERSION = '20260626-2';
 
 const state = {
   seeds: {},
   currentKey: 'reference',
   config: null,
   result: null,
-  chartVisibility: { growth: true, final: true },
+  chartVisibility: { growth: true, cycle: false, buffed: false, final: true },
   trendVisibility: { avg10: true, avg20: true, avg50: true, avg100: true },
 };
 
@@ -234,7 +234,7 @@ function initEls() {
     'guideDifficulty','coinDifficulty','tailCapMax','tailCapWindow','tailCapEnabled','streakEnabled','streakExtraDefault','guideLevels',
     'coinLevels','buffGrid','halfStepThreshold','integerThreshold','halfStep','projectTitle','heroStats',
     'focusStart','focusEnd','focusTable','overrideTable','curveCanvas','trendCanvas','protocolWarning',
-    'runtimeWarning','runtimeWarningText','showGrowth','showFinal','showAvg10','showAvg20','showAvg50','showAvg100','exportFocusBtn','cycleAverageValue'
+    'runtimeWarning','runtimeWarningText','showGrowth','showCycle','showBuffed','showFinal','showAvg10','showAvg20','showAvg50','showAvg100','exportFocusBtn','cycleAverageValue'
   ].forEach((id) => { els[id] = $(id); });
 }
 
@@ -258,9 +258,11 @@ function configToForm() {
   els.integerThreshold.value = c.rounding.integerThreshold;
   els.halfStep.value = c.rounding.halfStep;
   els.focusStart.value = 1;
-  els.focusEnd.value = c.levelCount;
-  els.showGrowth.checked = !!state.chartVisibility.growth;
-  els.showFinal.checked = !!state.chartVisibility.final;
+  els.focusEnd.value = Math.min(c.levelCount, 100);
+  if (els.showGrowth) els.showGrowth.checked = !!state.chartVisibility.growth;
+  if (els.showCycle) els.showCycle.checked = !!state.chartVisibility.cycle;
+  if (els.showBuffed) els.showBuffed.checked = !!state.chartVisibility.buffed;
+  if (els.showFinal) els.showFinal.checked = !!state.chartVisibility.final;
   syncLegendState();
   buildCycleValueInputs();
   buildBuffInputs();
@@ -324,7 +326,7 @@ function buildBuffInputs() {
   els.buffGrid.innerHTML = '';
   for (let i = 0; i < 6; i += 1) {
     const wrap = document.createElement('div');
-    wrap.className = 'panel';
+    wrap.className = 'buff-item';
     wrap.innerHTML = `
       <h2>Buff ${i}</h2>
       <label>占比<input data-kind="weight" data-index="${i}" type="number" step="0.01" value="${state.config.buffModel.weights[i] ?? 0}"></label>
@@ -576,8 +578,10 @@ function setupChartTooltip(canvas) {
 function renderChart() {
   const rows = state.result.rows;
   const seriesEntries = [
-    { key: 'growth', name: '基础增长', data: rows.map((r) => r.growth), color: '#f2b705', visible: state.chartVisibility.growth, lineWidth: 2.2 },
-    { key: 'final', name: '最终输出', data: rows.map((r) => r.finalDifficulty), color: '#2f8f72', visible: state.chartVisibility.final, lineWidth: 2.5, decimals: 1 },
+    { key: 'growth', name: '基础增长', data: rows.map((r) => r.growth), color: '#d7a300', visible: state.chartVisibility.growth, lineWidth: 2 },
+    { key: 'cycle', name: '周期修正', data: rows.map((r) => r.cycleValue), color: '#d26b36', visible: state.chartVisibility.cycle, lineWidth: 1.8 },
+    { key: 'buffed', name: 'Buff体感', data: rows.map((r) => r.buffed), color: '#8a63d2', visible: state.chartVisibility.buffed, lineWidth: 1.8 },
+    { key: 'final', name: '最终输出', data: rows.map((r) => r.finalDifficulty), color: '#2f8f72', visible: state.chartVisibility.final, lineWidth: 2.8, decimals: 1 },
   ];
   drawLines(els.curveCanvas, seriesEntries, { levelIds: rows.map((r) => r.levelId) });
 }
@@ -595,7 +599,7 @@ function renderTrendChart() {
 }
 
 function syncLegendState() {
-  ['showGrowth', 'showFinal', 'showAvg10', 'showAvg20', 'showAvg50', 'showAvg100'].forEach((id) => {
+  ['showGrowth', 'showCycle', 'showBuffed', 'showFinal', 'showAvg10', 'showAvg20', 'showAvg50', 'showAvg100'].forEach((id) => {
     const input = els[id];
     if (!input) return;
     input.closest('.legend-toggle')?.classList.toggle('off', !input.checked);
@@ -681,20 +685,20 @@ function bindBaseInputs() {
     });
   });
 
-  els.dataSource.addEventListener('change', () => {
+  if (els.dataSource) els.dataSource.addEventListener('change', () => {
     state.currentKey = els.dataSource.value;
     state.config = deepClone(state.seeds[state.currentKey]);
     configToForm();
     recompute();
   });
 
-  els.resetBtn.addEventListener('click', () => {
+  if (els.resetBtn) els.resetBtn.addEventListener('click', () => {
     state.config = deepClone(state.seeds[state.currentKey]);
     configToForm();
     recompute();
   });
 
-  els.exportBtn.addEventListener('click', () => {
+  if (els.exportBtn) els.exportBtn.addEventListener('click', () => {
     const blob = new Blob([JSON.stringify(state.config, null, 2)], { type: 'application/json;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -706,6 +710,8 @@ function bindBaseInputs() {
 
   [
     ['showGrowth', 'growth'],
+    ['showCycle', 'cycle'],
+    ['showBuffed', 'buffed'],
     ['showFinal', 'final'],
   ].forEach(([id, key]) => {
     if (!els[id]) return;
@@ -730,7 +736,7 @@ function bindBaseInputs() {
     });
   });
 
-  els.exportFocusBtn.addEventListener('click', exportFocusTable);
+  if (els.exportFocusBtn) els.exportFocusBtn.addEventListener('click', exportFocusTable);
 }
 
 function buildReferenceCycleValues() {
@@ -811,29 +817,4 @@ async function init() {
 init().catch((error) => {
   document.body.innerHTML = `<pre style="padding:24px;color:#b00020;white-space:pre-wrap;">初始化失败\n${error.message}</pre>`;
 });
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 

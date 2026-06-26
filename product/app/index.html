@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>难度曲线动态计算器</title>
-  <link rel="stylesheet" href="./styles.css?v=20260626-1" />
+  <link rel="stylesheet" href="./styles.css?v=20260626-2" />
 </head>
 <body>
   <div class="app-shell">
@@ -15,7 +15,9 @@
       </div>
 
       <div class="panel sticky">
+        <p class="eyebrow">Difficulty Curve Lab</p>
         <h1>难度曲线动态计算器</h1>
+        <p class="sidebar-subtitle">调整模型参数，实时查看最终难度、滚动均值和前期手调结果。</p>
         <div class="field-group compact">
           <label for="dataSource">数据源</label>
           <select id="dataSource">
@@ -32,7 +34,7 @@
 
       <section class="panel">
         <h2>基础增长</h2>
-<div class="grid two">
+        <div class="grid two">
           <label>关卡总数<input id="levelCount" type="number" min="50" max="5000" step="10" /></label>
         </div>
         <div class="formula-split">
@@ -66,7 +68,7 @@
 
       <section class="panel">
         <h2>特殊关</h2>
-<div class="grid two">
+        <div class="grid two">
           <label>引导关难度<input id="guideDifficulty" type="number" min="0.5" max="5" step="0.1" /></label>
           <label>金币关难度<input id="coinDifficulty" type="number" min="0.5" max="5" step="0.1" /></label>
           <label>尾号关封顶<input id="tailCapMax" type="number" min="0.5" max="10" step="0.1" /></label>
@@ -88,7 +90,7 @@
 
       <section class="panel">
         <h2>难度取整规则</h2>
-<p class="muted formula-tip">难度计算结果小于 1 时，按 1 处理。</p>
+        <p class="muted formula-tip">难度计算结果小于 1 时，按 1 处理。</p>
         <p class="muted formula-tip">最终难度统一只保留到小数点后 1 位。</p>
         <div class="grid two">
           <label>难度小于 x，难度不变<input id="halfStepThreshold" type="number" step="0.1" /></label>
@@ -131,6 +133,8 @@
           <h2>曲线总览</h2>
           <div class="legend" id="curveLegend">
             <label class="legend-toggle"><input id="showGrowth" type="checkbox" checked /><span class="swatch growth"></span><span>基础增长</span></label>
+            <label class="legend-toggle"><input id="showCycle" type="checkbox" /><span class="swatch cycle"></span><span>周期修正</span></label>
+            <label class="legend-toggle"><input id="showBuffed" type="checkbox" /><span class="swatch buffed"></span><span>Buff体感</span></label>
             <label class="legend-toggle"><input id="showFinal" type="checkbox" checked /><span class="swatch final"></span><span>最终输出</span></label>
           </div>
         </div>
@@ -209,34 +213,7 @@
     </main>
   </div>
 
-  <script src="./app.js?v=20260626-1"></script>
+  <script src="./app.js?v=20260626-2"></script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
