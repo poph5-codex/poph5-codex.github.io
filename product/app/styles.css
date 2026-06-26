@@ -232,7 +232,7 @@ button.secondary:hover { background: #d4e0eb; }
 }
 
 .toolbar { margin-top: 12px; }
-.toolbar button { flex: 1 1 140px; }
+.toolbar button { flex: 1 1 110px; }
 
 .section-head {
   justify-content: space-between;

@@ -1,15 +1,16 @@
-﻿const DATA_VERSION = '20260626-2';
+﻿const DATA_VERSION = '20260626-3';
 
 const state = {
   seeds: {},
   currentKey: 'reference',
   config: null,
   result: null,
-  chartVisibility: { growth: true, cycle: false, buffed: false, final: true },
+  chartVisibility: { growth: true, final: true },
   trendVisibility: { avg10: true, avg20: true, avg50: true, avg100: true },
 };
 
 const els = {};
+const SAVED_CONFIG_PREFIX = 'difficultyCurve.savedConfig.';
 
 async function loadJson(path) {
   const separator = path.includes('?') ? '&' : '?';
@@ -230,14 +231,51 @@ function $(id) {
 
 function initEls() {
   [
-    'dataSource','resetBtn','exportBtn','levelCount','growthFormulaNumerator','growthFormulaDenominator','cycleLength','cycleValues',
+    'dataSource','resetBtn','saveBtn','exportBtn','levelCount','growthFormulaNumerator','growthFormulaDenominator','cycleLength','cycleValues',
     'guideDifficulty','coinDifficulty','tailCapMax','tailCapWindow','tailCapEnabled','streakEnabled','streakExtraDefault','guideLevels',
     'coinLevels','buffGrid','halfStepThreshold','integerThreshold','halfStep','projectTitle','heroStats',
     'focusStart','focusEnd','focusTable','overrideTable','curveCanvas','trendCanvas','protocolWarning',
-    'runtimeWarning','runtimeWarningText','showGrowth','showCycle','showBuffed','showFinal','showAvg10','showAvg20','showAvg50','showAvg100','exportFocusBtn','cycleAverageValue'
+    'runtimeWarning','runtimeWarningText','showGrowth','showFinal','showAvg10','showAvg20','showAvg50','showAvg100','exportFocusBtn','cycleAverageValue'
   ].forEach((id) => { els[id] = $(id); });
 }
 
+function savedConfigKey(key = state.currentKey) {
+  return `${SAVED_CONFIG_PREFIX}${key}`;
+}
+
+function loadSavedConfig(key) {
+  try {
+    const raw = localStorage.getItem(savedConfigKey(key));
+    return raw ? JSON.parse(raw) : null;
+  } catch (error) {
+    console.warn('读取本地保存配置失败。', error);
+    return null;
+  }
+}
+
+function saveCurrentConfig() {
+  try {
+    updateConfigFromForm();
+    localStorage.setItem(savedConfigKey(), JSON.stringify(state.config));
+    if (els.saveBtn) {
+      els.saveBtn.textContent = '已保存';
+      window.clearTimeout(els.saveBtn._labelTimer);
+      els.saveBtn._labelTimer = window.setTimeout(() => {
+        els.saveBtn.textContent = '保存当前配置';
+      }, 1400);
+    }
+  } catch (error) {
+    showRuntimeWarning(error.message || '保存失败，请检查当前输入。');
+  }
+}
+
+function clearSavedConfig(key = state.currentKey) {
+  localStorage.removeItem(savedConfigKey(key));
+}
+
+function cloneConfigForKey(key) {
+  return deepClone(loadSavedConfig(key) || state.seeds[key]);
+}
 function configToForm() {
   const c = state.config;
   els.levelCount.value = c.levelCount;
@@ -258,10 +296,8 @@ function configToForm() {
   els.integerThreshold.value = c.rounding.integerThreshold;
   els.halfStep.value = c.rounding.halfStep;
   els.focusStart.value = 1;
-  els.focusEnd.value = Math.min(c.levelCount, 100);
+  els.focusEnd.value = Math.min(c.levelCount, 2200);
   if (els.showGrowth) els.showGrowth.checked = !!state.chartVisibility.growth;
-  if (els.showCycle) els.showCycle.checked = !!state.chartVisibility.cycle;
-  if (els.showBuffed) els.showBuffed.checked = !!state.chartVisibility.buffed;
   if (els.showFinal) els.showFinal.checked = !!state.chartVisibility.final;
   syncLegendState();
   buildCycleValueInputs();
@@ -578,9 +614,7 @@ function setupChartTooltip(canvas) {
 function renderChart() {
   const rows = state.result.rows;
   const seriesEntries = [
-    { key: 'growth', name: '基础增长', data: rows.map((r) => r.growth), color: '#d7a300', visible: state.chartVisibility.growth, lineWidth: 2 },
-    { key: 'cycle', name: '周期修正', data: rows.map((r) => r.cycleValue), color: '#d26b36', visible: state.chartVisibility.cycle, lineWidth: 1.8 },
-    { key: 'buffed', name: 'Buff体感', data: rows.map((r) => r.buffed), color: '#8a63d2', visible: state.chartVisibility.buffed, lineWidth: 1.8 },
+    { key: 'growth', name: '基础增长', data: rows.map((r) => r.growth), color: '#d7a300', visible: state.chartVisibility.growth, lineWidth: 2.2 },
     { key: 'final', name: '最终输出', data: rows.map((r) => r.finalDifficulty), color: '#2f8f72', visible: state.chartVisibility.final, lineWidth: 2.8, decimals: 1 },
   ];
   drawLines(els.curveCanvas, seriesEntries, { levelIds: rows.map((r) => r.levelId) });
@@ -599,7 +633,7 @@ function renderTrendChart() {
 }
 
 function syncLegendState() {
-  ['showGrowth', 'showCycle', 'showBuffed', 'showFinal', 'showAvg10', 'showAvg20', 'showAvg50', 'showAvg100'].forEach((id) => {
+  ['showGrowth', 'showFinal', 'showAvg10', 'showAvg20', 'showAvg50', 'showAvg100'].forEach((id) => {
     const input = els[id];
     if (!input) return;
     input.closest('.legend-toggle')?.classList.toggle('off', !input.checked);
@@ -687,16 +721,19 @@ function bindBaseInputs() {
 
   if (els.dataSource) els.dataSource.addEventListener('change', () => {
     state.currentKey = els.dataSource.value;
-    state.config = deepClone(state.seeds[state.currentKey]);
+    state.config = cloneConfigForKey(state.currentKey);
     configToForm();
     recompute();
   });
 
   if (els.resetBtn) els.resetBtn.addEventListener('click', () => {
+    clearSavedConfig();
     state.config = deepClone(state.seeds[state.currentKey]);
     configToForm();
     recompute();
   });
+
+  if (els.saveBtn) els.saveBtn.addEventListener('click', saveCurrentConfig);
 
   if (els.exportBtn) els.exportBtn.addEventListener('click', () => {
     const blob = new Blob([JSON.stringify(state.config, null, 2)], { type: 'application/json;charset=utf-8' });
@@ -710,8 +747,6 @@ function bindBaseInputs() {
 
   [
     ['showGrowth', 'growth'],
-    ['showCycle', 'cycle'],
-    ['showBuffed', 'buffed'],
     ['showFinal', 'final'],
   ].forEach(([id, key]) => {
     if (!els[id]) return;
@@ -801,7 +836,7 @@ async function init() {
 
   state.seeds.default = defaultSeed;
   state.seeds.default.specialRules = { ...state.seeds.default.specialRules, streakExtraDefault: 1.1 };
-  state.config = deepClone(state.seeds[state.currentKey]);
+  state.config = cloneConfigForKey(state.currentKey);
   updateProtocolWarning();
   els.dataSource.value = state.currentKey;
   configToForm();

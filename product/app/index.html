@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>难度曲线动态计算器</title>
-  <link rel="stylesheet" href="./styles.css?v=20260626-2" />
+  <link rel="stylesheet" href="./styles.css?v=20260626-3" />
 </head>
 <body>
   <div class="app-shell">
@@ -28,6 +28,7 @@
 
         <div class="toolbar">
           <button id="resetBtn" class="secondary">恢复原版数据</button>
+          <button id="saveBtn" type="button" class="secondary">保存当前配置</button>
           <button id="exportBtn">导出当前配置</button>
         </div>
       </div>
@@ -133,8 +134,6 @@
           <h2>曲线总览</h2>
           <div class="legend" id="curveLegend">
             <label class="legend-toggle"><input id="showGrowth" type="checkbox" checked /><span class="swatch growth"></span><span>基础增长</span></label>
-            <label class="legend-toggle"><input id="showCycle" type="checkbox" /><span class="swatch cycle"></span><span>周期修正</span></label>
-            <label class="legend-toggle"><input id="showBuffed" type="checkbox" /><span class="swatch buffed"></span><span>Buff体感</span></label>
             <label class="legend-toggle"><input id="showFinal" type="checkbox" checked /><span class="swatch final"></span><span>最终输出</span></label>
           </div>
         </div>
@@ -213,7 +212,7 @@
     </main>
   </div>
 
-  <script src="./app.js?v=20260626-2"></script>
+  <script src="./app.js?v=20260626-3"></script>
 </body>
 </html>
 
