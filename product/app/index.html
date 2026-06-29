@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>难度曲线动态计算器</title>
-  <link rel="stylesheet" href="./styles.css?v=20260626-10" />
+  <link rel="stylesheet" href="./styles.css?v=20260626-11" />
 </head>
 <body>
   <div class="app-shell">
@@ -106,13 +106,12 @@
           <h2>算法说明</h2>
         </div>
         <ol>
-          <li>先用基础增长公式，根据关卡号算出基础难度。</li>
-          <li>再乘以 50 关周期逐关值，形成关卡节奏波动。</li>
-          <li>然后套用特殊关规则，例如引导关、金币关、尾号关封顶、前 50 关手调。</li>
-          <li>Buff 体感用于估算玩家带 Buff 后看到的难度，不直接等同最终输出。</li>
-          <li>最终难度会再经过取整规则，得到表格和曲线里的最终结果。</li>
+          <li>左侧先填基础增长公式。系统会把关卡号代入 x，算出每一关的基础难度。</li>
+          <li>再看“50关小循环难度”。每一关会乘上对应的周期值，让难度出现节奏起伏。</li>
+          <li>接着套用特殊关规则，例如引导关、金币关、尾号关封顶和前 50 关人工微调。</li>
+          <li>最后按取整规则处理，得到右侧曲线和详细数据表里的“最终难度”。</li>
         </ol>
-        <p class="muted formula-line">简化理解：最终难度 = 取整规则(特殊关修正(基础增长公式 × 周期逐关值))</p>
+        <p class="muted formula-line">简单理解：基础增长先定大趋势，周期值制造波动，特殊关规则做局部修正，取整后就是最终输出。</p>
       </section>
 
       <section class="hero">
@@ -145,7 +144,11 @@
         <div class="section-head detail-head">
           <div class="detail-copy">
             <h2>详细数据</h2>
-            <p class="muted section-help">基础增长：只调用“基础增长公式（x代表关卡id）”算出的难度；周期修正：叠加周期后的难度；特殊关修正：再经过引导关、金币关等规则修正后的难度；最终难度：按取整规则得到的最终结果；近10关 / 近20关 / 近50关 / 近100关：从当前关往前看的滚动平均难度。</p>
+            <p class="muted section-help detail-help">
+              <span>基础增长：只调用“基础增长公式（x代表关卡id）”算出的难度；周期修正：叠加周期后的难度。</span>
+              <span>特殊关修正：再经过引导关、金币关等规则修正后的难度；最终难度：按取整规则得到的最终结果。</span>
+              <span>近10关 / 近20关 / 近50关 / 近100关：从当前关往前看的滚动平均难度。</span>
+            </p>
           </div>
           <div class="range-tools">
             <label>开始关
@@ -212,6 +215,6 @@
     </main>
   </div>
 
-  <script src="./app.js?v=20260626-10"></script>
+  <script src="./app.js?v=20260626-11"></script>
 </body>
 </html>

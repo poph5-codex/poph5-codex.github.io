@@ -705,3 +705,11 @@ input[type="number"]::-webkit-inner-spin-button {
     justify-content: flex-start;
   }
 }
+.detail-help {
+  display: grid;
+  gap: 3px;
+}
+
+.detail-help span {
+  display: block;
+}
