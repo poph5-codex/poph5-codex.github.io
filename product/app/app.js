@@ -1,4 +1,4 @@
-const DATA_VERSION = '20260626-14';
+const DATA_VERSION = '20260626-15';
 
 const state = {
   seeds: {},
@@ -233,7 +233,7 @@ function initEls() {
   [
     'dataSource','resetBtn','saveBtn','exportBtn','levelCount','growthFormulaNumerator','growthFormulaDenominator','cycleLength','cycleValues',
     'guideDifficulty','coinDifficulty','tailCapMax','tailCapWindow','tailCapEnabled','streakEnabled','streakExtraDefault','guideLevels',
-    'coinLevels','buffGrid','halfStepThreshold','integerThreshold','halfStep','projectTitle','heroStats',
+    'coinLevels','buffGrid','halfStepThreshold','integerThreshold','projectTitle','heroStats',
     'focusStart','focusEnd','focusTable','overrideTable','curveCanvas','trendCanvas','protocolWarning',
     'runtimeWarning','runtimeWarningText','showGrowth','showFinal','showTrendGrowth','showAvg10','showAvg20','showAvg50','showAvg100','exportFocusBtn','cycleAverageValue'
   ].forEach((id) => { els[id] = $(id); });
@@ -294,7 +294,6 @@ function configToForm() {
   els.coinLevels.value = (c.specialRules.coinLevels || []).join(', ');
   els.halfStepThreshold.value = c.rounding.halfStepThreshold;
   els.integerThreshold.value = c.rounding.integerThreshold;
-  els.halfStep.value = c.rounding.halfStep;
   els.focusStart.value = 1;
   els.focusEnd.value = Math.min(c.levelCount, 2200);
   if (els.showGrowth) els.showGrowth.checked = !!state.chartVisibility.growth;
@@ -323,7 +322,7 @@ function updateConfigFromForm() {
   c.specialRules.coinLevels = parseLevelList(els.coinLevels.value);
   c.rounding.halfStepThreshold = num(els.halfStepThreshold.value, c.rounding.halfStepThreshold);
   c.rounding.integerThreshold = num(els.integerThreshold.value, c.rounding.integerThreshold);
-  c.rounding.halfStep = num(els.halfStep.value, c.rounding.halfStep);
+  c.rounding.halfStep = num(c.rounding.halfStep, 0.5);
 }
 
 function updateCycleAverage() {
@@ -706,7 +705,7 @@ function bindBaseInputs() {
   [
     'levelCount','growthFormulaNumerator','growthFormulaDenominator','cycleLength','guideDifficulty','coinDifficulty','tailCapMax',
     'tailCapWindow','tailCapEnabled','streakEnabled','guideLevels','coinLevels','halfStepThreshold',
-    'integerThreshold','halfStep','focusStart','focusEnd'
+    'integerThreshold','focusStart','focusEnd'
   ].forEach((id) => {
     if (!els[id]) return;
     els[id].addEventListener('input', () => {
