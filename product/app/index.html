@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>难度曲线动态计算器</title>
-  <link rel="stylesheet" href="./styles.css?v=20260626-7" />
+  <link rel="stylesheet" href="./styles.css?v=20260626-8" />
 </head>
 <body>
   <div class="app-shell">
@@ -40,7 +40,7 @@
         </div>
         <div class="formula-split">
           <label class="formula-part formula-numerator">
-            <span>基础增长公式（前半部分）</span>
+            <span>基础增长公式（x代表关卡id）</span>
             <input id="growthFormulaNumerator" type="text" spellcheck="false" autocomplete="off" placeholder="例如 ((1.08 * ln(x + 78)) - 3.8)" />
           </label>
           <div class="formula-divider" aria-hidden="true">/</div>
@@ -49,7 +49,6 @@
             <input id="growthFormulaDenominator" type="text" inputmode="decimal" autocomplete="off" spellcheck="false" maxlength="3" />
           </label>
         </div>
-        <p class="muted formula-tip">（<code>x</code>代表关卡ID）</p>
       </section>
 
       <section class="panel">
@@ -137,7 +136,7 @@
             <label class="legend-toggle"><input id="showFinal" type="checkbox" checked /><span class="swatch final"></span><span>最终输出</span></label>
           </div>
         </div>
-        <p class="muted section-help">基础增长：只调用左侧“基础增长公式（前半部分）”的底盘走势；最终输出：再经过特殊关、前 50 关手调和取整规则后的最终难度，对应 Excel 的最终曲线结果。</p>
+        <p class="muted section-help">基础增长：只调用左侧“基础增长公式（x代表关卡id）”的底盘走势；最终输出：再经过特殊关、前 50 关手调和取整规则后的最终难度，对应 Excel 的最终曲线结果。</p>
         <div class="chart-wrap">
           <canvas id="curveCanvas" width="1200" height="420"></canvas>
         </div>
@@ -156,7 +155,7 @@
             <button id="exportFocusBtn" type="button" class="secondary">导出数据</button>
           </div>
         </div>
-        <p class="muted section-help">基础增长：只调用“基础增长公式（前半部分）”算出的难度；周期修正：叠加周期后的难度；特殊关修正：再经过引导关、金币关等规则修正后的难度；最终难度：按取整规则得到的最终结果；近10关 / 近20关 / 近50关 / 近100关：从当前关往前看的滚动平均难度。</p>
+        <p class="muted section-help">基础增长：只调用“基础增长公式（x代表关卡id）”算出的难度；周期修正：叠加周期后的难度；特殊关修正：再经过引导关、金币关等规则修正后的难度；最终难度：按取整规则得到的最终结果；近10关 / 近20关 / 近50关 / 近100关：从当前关往前看的滚动平均难度。</p>
         <div class="table-wrap">
           <table>
             <thead>
@@ -212,6 +211,6 @@
     </main>
   </div>
 
-  <script src="./app.js?v=20260626-7"></script>
+  <script src="./app.js?v=20260626-8"></script>
 </body>
 </html>

@@ -360,7 +360,7 @@ button.secondary:hover { background: #d4e0eb; }
 
 .cycle-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(78px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
   gap: 8px;
   max-height: 320px;
   margin-top: 10px;
@@ -473,7 +473,8 @@ canvas {
 
 table {
   width: 100%;
-  min-width: 860px;
+  min-width: 900px;
+  table-layout: fixed;
   border-collapse: collapse;
   font-size: 13px;
 }
@@ -481,13 +482,14 @@ table {
 th,
 td {
   border-bottom: 1px solid var(--border);
-  padding: 9px 10px;
-  text-align: right;
+  padding: 9px 12px;
+  text-align: center;
   white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
 
 th:first-child,
-td:first-child { text-align: left; }
+td:first-child { text-align: center; }
 
 thead th {
   position: sticky;
@@ -613,7 +615,7 @@ tbody tr:hover { background: #eef6ff; }
     border-bottom: 1px solid var(--border);
   }
 
-  .cycle-grid { grid-template-columns: repeat(5, minmax(78px, 1fr)); }
+  .cycle-grid { grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); }
 }
 
 @media (max-width: 720px) {
