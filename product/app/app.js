@@ -1,4 +1,4 @@
-﻿const DATA_VERSION = '20260626-4';
+﻿const DATA_VERSION = '20260626-5';
 
 const state = {
   seeds: {},
@@ -617,8 +617,8 @@ function setupChartTooltip(canvas) {
 function renderChart() {
   const rows = state.result.rows;
   const seriesEntries = [
-    { key: 'growth', name: '基础增长', data: rows.map((r) => r.growth), color: '#d7a300', visible: state.chartVisibility.growth, lineWidth: 2.2 },
     { key: 'final', name: '最终输出', data: rows.map((r) => r.finalDifficulty), color: '#2f8f72', visible: state.chartVisibility.final, lineWidth: 2.8, decimals: 1 },
+    { key: 'growth', name: '基础增长', data: rows.map((r) => r.growth), color: '#d7a300', visible: state.chartVisibility.growth, lineWidth: 2.2 },
   ];
   drawLines(els.curveCanvas, seriesEntries, { levelIds: rows.map((r) => r.levelId) });
 }
