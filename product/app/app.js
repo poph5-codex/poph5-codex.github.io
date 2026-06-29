@@ -1,4 +1,4 @@
-﻿const DATA_VERSION = '20260626-5';
+const DATA_VERSION = '20260626-6';
 
 const state = {
   seeds: {},
@@ -6,7 +6,7 @@ const state = {
   config: null,
   result: null,
   chartVisibility: { growth: true, final: true },
-  trendVisibility: { avg10: true, avg20: true, avg50: true, avg100: true },
+  trendVisibility: { growth: true, avg10: true, avg20: true, avg50: true, avg100: true },
 };
 
 const els = {};
@@ -235,7 +235,7 @@ function initEls() {
     'guideDifficulty','coinDifficulty','tailCapMax','tailCapWindow','tailCapEnabled','streakEnabled','streakExtraDefault','guideLevels',
     'coinLevels','buffGrid','halfStepThreshold','integerThreshold','halfStep','projectTitle','heroStats',
     'focusStart','focusEnd','focusTable','overrideTable','curveCanvas','trendCanvas','protocolWarning',
-    'runtimeWarning','runtimeWarningText','showGrowth','showFinal','showAvg10','showAvg20','showAvg50','showAvg100','exportFocusBtn','cycleAverageValue'
+    'runtimeWarning','runtimeWarningText','showGrowth','showFinal','showTrendGrowth','showAvg10','showAvg20','showAvg50','showAvg100','exportFocusBtn','cycleAverageValue'
   ].forEach((id) => { els[id] = $(id); });
 }
 
@@ -445,7 +445,6 @@ function renderFocusTable() {
       <td>${row.growth.toFixed(2)}</td>
       <td>${row.cycleValue.toFixed(2)}</td>
       <td>${row.adjusted.toFixed(2)}</td>
-      <td>${row.buffed.toFixed(2)}</td>
       <td>${row.finalDifficulty.toFixed(1)}</td>
       <td>${row.avg10.toFixed(2)}</td>
       <td>${row.avg20.toFixed(2)}</td>
@@ -631,12 +630,13 @@ function renderTrendChart() {
     { name: '近20关', data: rows.map((r) => r.avg20), color: '#1769aa', lineWidth: 2, visible: state.trendVisibility.avg20, decimals: 2 },
     { name: '近50关', data: rows.map((r) => r.avg50), color: '#2f8f72', lineWidth: 2, visible: state.trendVisibility.avg50, decimals: 2 },
     { name: '近100关', data: rows.map((r) => r.avg100), color: '#8a63d2', lineWidth: 2, visible: state.trendVisibility.avg100, decimals: 2 },
+    { name: '基础增长曲线', data: rows.map((r) => r.growth), color: '#d7a300', lineWidth: 2.2, visible: state.trendVisibility.growth, decimals: 2 },
   ];
   drawLines(els.trendCanvas, seriesEntries, { levelIds: rows.map((r) => r.levelId) });
 }
 
 function syncLegendState() {
-  ['showGrowth', 'showFinal', 'showAvg10', 'showAvg20', 'showAvg50', 'showAvg100'].forEach((id) => {
+  ['showGrowth', 'showFinal', 'showTrendGrowth', 'showAvg10', 'showAvg20', 'showAvg50', 'showAvg100'].forEach((id) => {
     const input = els[id];
     if (!input) return;
     input.closest('.legend-toggle')?.classList.toggle('off', !input.checked);
@@ -680,13 +680,12 @@ function recompute() {
 
 function exportFocusTable() {
   const rows = focusRowsData();
-  const header = ['关卡', '基础增长', '周期修正', '特殊关后', 'Buff体感', '最终难度', '近10关', '近20关', '近50关', '近100关'];
+  const header = ['关卡', '基础增长', '周期修正', '特殊关修正', '最终难度', '近10关', '近20关', '近50关', '近100关'];
   const lines = [header.join(',')].concat(rows.map((row) => [
     row.levelId,
     row.growth.toFixed(2),
     row.cycleValue.toFixed(2),
     row.adjusted.toFixed(2),
-    row.buffed.toFixed(2),
     row.finalDifficulty.toFixed(1),
     row.avg10.toFixed(2),
     row.avg20.toFixed(2),
@@ -761,6 +760,7 @@ function bindBaseInputs() {
   });
 
   [
+    ['showTrendGrowth', 'growth'],
     ['showAvg10', 'avg10'],
     ['showAvg20', 'avg20'],
     ['showAvg50', 'avg50'],
@@ -855,4 +855,3 @@ async function init() {
 init().catch((error) => {
   document.body.innerHTML = `<pre style="padding:24px;color:#b00020;white-space:pre-wrap;">初始化失败\n${error.message}</pre>`;
 });
-

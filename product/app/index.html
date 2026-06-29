@@ -1,10 +1,10 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="zh-CN">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>难度曲线动态计算器</title>
-  <link rel="stylesheet" href="./styles.css?v=20260626-5" />
+  <link rel="stylesheet" href="./styles.css?v=20260626-6" />
 </head>
 <body>
   <div class="app-shell">
@@ -28,8 +28,8 @@
 
         <div class="toolbar">
           <button id="resetBtn" class="secondary">恢复原版数据</button>
-          <button id="saveBtn" type="button" class="secondary">保存当前配置</button>
           <button id="exportBtn">导出当前配置</button>
+          <button id="saveBtn" type="button" class="secondary">保存当前配置</button>
         </div>
       </div>
 
@@ -49,7 +49,7 @@
             <input id="growthFormulaDenominator" type="text" inputmode="decimal" autocomplete="off" spellcheck="false" maxlength="3" />
           </label>
         </div>
-        <p class="muted formula-tip">可用变量：<code>x</code> 代表关卡 ID。前半部分可用函数：<code>ln()</code>、<code>log()</code>、<code>sqrt()</code>、<code>pow(a,b)</code>、<code>abs()</code>。50关均值固定在右侧。</p>
+        <p class="muted formula-tip">（<code>x</code>代表关卡ID）</p>
       </section>
 
       <section class="panel">
@@ -145,7 +145,7 @@
 
       <section class="panel">
         <div class="section-head">
-          <h2>分段观察</h2>
+          <h2>详细数据</h2>
           <div class="range-tools">
             <label>开始关
               <input id="focusStart" type="number" min="1" step="1" />
@@ -156,7 +156,7 @@
             <button id="exportFocusBtn" type="button" class="secondary">导出数据</button>
           </div>
         </div>
-        <p class="muted section-help">关卡：当前查看的关卡编号；基础增长：只调用“基础增长公式（前半部分）”算出的难度；周期修正：叠加周期后的难度；特殊关后：再经过引导关、金币关等规则修正后的难度；Buff体感：考虑玩家 buff 状态后的体感难度；最终难度：按取整规则得到的最终结果；近10关 / 近20关 / 近50关 / 近100关：从当前关往前看的滚动平均难度。</p>
+        <p class="muted section-help">基础增长：只调用“基础增长公式（前半部分）”算出的难度；周期修正：叠加周期后的难度；特殊关修正：再经过引导关、金币关等规则修正后的难度；最终难度：按取整规则得到的最终结果；近10关 / 近20关 / 近50关 / 近100关：从当前关往前看的滚动平均难度。</p>
         <div class="table-wrap">
           <table>
             <thead>
@@ -164,8 +164,7 @@
                 <th>关卡</th>
                 <th>基础增长</th>
                 <th>周期修正</th>
-                <th>特殊关后</th>
-                <th>Buff体感</th>
+                <th>特殊关修正</th>
                 <th>最终难度</th>
                 <th>近10关</th>
                 <th>近20关</th>
@@ -182,6 +181,7 @@
         <div class="section-head">
           <h2>趋势-近x关均难度</h2>
           <div class="legend compact-legend" id="trendLegend">
+            <label class="legend-toggle"><input id="showTrendGrowth" type="checkbox" checked /><span class="swatch growth"></span><span>基础增长曲线</span></label>
             <label class="legend-toggle"><input id="showAvg10" type="checkbox" checked /><span class="swatch avg10"></span><span>近10关</span></label>
             <label class="legend-toggle"><input id="showAvg20" type="checkbox" checked /><span class="swatch avg20"></span><span>近20关</span></label>
             <label class="legend-toggle"><input id="showAvg50" type="checkbox" checked /><span class="swatch avg50"></span><span>近50关</span></label>
@@ -212,7 +212,6 @@
     </main>
   </div>
 
-  <script src="./app.js?v=20260626-5"></script>
+  <script src="./app.js?v=20260626-6"></script>
 </body>
 </html>
-
