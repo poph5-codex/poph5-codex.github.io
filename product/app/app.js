@@ -1,4 +1,4 @@
-const DATA_VERSION = '20260626-8';
+const DATA_VERSION = '20260626-9';
 
 const state = {
   seeds: {},
