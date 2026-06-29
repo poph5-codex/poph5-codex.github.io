@@ -673,3 +673,35 @@ input[type="number"]::-webkit-inner-spin-button {
   margin: 0;
   -webkit-appearance: none;
 }
+.detail-head {
+  align-items: flex-start;
+  gap: 18px;
+  margin-bottom: 14px;
+}
+
+.detail-copy {
+  flex: 1 1 520px;
+  min-width: 280px;
+}
+
+.detail-copy .section-help {
+  max-width: 760px;
+  margin: 8px 0 0;
+  line-height: 1.7;
+}
+
+.detail-head .range-tools {
+  flex: 0 0 auto;
+  align-items: end;
+  justify-content: flex-end;
+}
+
+.detail-head .range-tools button {
+  min-width: 110px;
+}
+@media (max-width: 900px) {
+  .detail-head .range-tools {
+    flex: 1 1 100%;
+    justify-content: flex-start;
+  }
+}

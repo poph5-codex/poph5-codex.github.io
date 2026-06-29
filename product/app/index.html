@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>难度曲线动态计算器</title>
-  <link rel="stylesheet" href="./styles.css?v=20260626-9" />
+  <link rel="stylesheet" href="./styles.css?v=20260626-10" />
 </head>
 <body>
   <div class="app-shell">
@@ -141,10 +141,12 @@
           <canvas id="curveCanvas" width="1200" height="420"></canvas>
         </div>
       </section>
-
-      <section class="panel">
-        <div class="section-head">
-          <h2>详细数据</h2>
+      <section class="panel detail-panel">
+        <div class="section-head detail-head">
+          <div class="detail-copy">
+            <h2>详细数据</h2>
+            <p class="muted section-help">基础增长：只调用“基础增长公式（x代表关卡id）”算出的难度；周期修正：叠加周期后的难度；特殊关修正：再经过引导关、金币关等规则修正后的难度；最终难度：按取整规则得到的最终结果；近10关 / 近20关 / 近50关 / 近100关：从当前关往前看的滚动平均难度。</p>
+          </div>
           <div class="range-tools">
             <label>开始关
               <input id="focusStart" type="number" min="1" step="1" />
@@ -155,7 +157,6 @@
             <button id="exportFocusBtn" type="button" class="secondary">导出数据</button>
           </div>
         </div>
-        <p class="muted section-help">基础增长：只调用“基础增长公式（x代表关卡id）”算出的难度；周期修正：叠加周期后的难度；特殊关修正：再经过引导关、金币关等规则修正后的难度；最终难度：按取整规则得到的最终结果；近10关 / 近20关 / 近50关 / 近100关：从当前关往前看的滚动平均难度。</p>
         <div class="table-wrap">
           <table>
             <thead>
@@ -211,6 +212,6 @@
     </main>
   </div>
 
-  <script src="./app.js?v=20260626-9"></script>
+  <script src="./app.js?v=20260626-10"></script>
 </body>
 </html>
