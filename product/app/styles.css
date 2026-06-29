@@ -724,5 +724,14 @@ input[type="number"]::-webkit-inner-spin-button {
 }
 
 .rounding-grid {
-  margin-top: 8px;
+  position: relative;
+  margin: 8px 0 0 20px;
+  padding: 10px 0 0 14px;
+  border-left: 2px solid var(--border);
+}
+@media (max-width: 720px) {
+  .rounding-grid {
+    margin-left: 10px;
+    padding-left: 12px;
+  }
 }
