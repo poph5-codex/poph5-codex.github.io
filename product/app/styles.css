@@ -572,6 +572,10 @@ tbody tr:hover { background: #eef6ff; }
   pointer-events: none;
 }
 
+.chart-tooltip[hidden] {
+  display: none !important;
+}
+
 .chart-tooltip span,
 .tooltip-row {
   color: var(--muted);

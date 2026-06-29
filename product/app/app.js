@@ -1,4 +1,4 @@
-﻿const DATA_VERSION = '20260626-3';
+﻿const DATA_VERSION = '20260626-4';
 
 const state = {
   seeds: {},
@@ -549,6 +549,7 @@ function getChartTooltip() {
     document.body.appendChild(tooltip);
   }
   tooltip.hidden = true;
+  tooltip.style.display = 'none';
   els.chartTooltip = tooltip;
   return tooltip;
 }
@@ -557,6 +558,7 @@ function hideChartTooltip() {
   const tooltip = els.chartTooltip || document.querySelector('.chart-tooltip');
   if (!tooltip) return;
   tooltip.hidden = true;
+  tooltip.style.display = 'none';
   tooltip.innerHTML = '';
 }
 
@@ -603,6 +605,7 @@ function setupChartTooltip(canvas) {
     tooltip.style.left = `${event.clientX + 14}px`;
     tooltip.style.top = `${event.clientY + 14}px`;
     tooltip.hidden = false;
+    tooltip.style.display = 'grid';
   });
 
   canvas.addEventListener('mouseleave', hideChartTooltip);
