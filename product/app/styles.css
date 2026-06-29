@@ -713,3 +713,16 @@ input[type="number"]::-webkit-inner-spin-button {
 .detail-help span {
   display: block;
 }
+.rule-notes {
+  display: grid;
+  gap: 6px;
+  margin: 0 0 12px;
+  padding-left: 20px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.rounding-grid {
+  margin-top: 8px;
+}
