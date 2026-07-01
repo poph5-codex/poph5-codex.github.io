@@ -1,4 +1,4 @@
-const DATA_VERSION = '20260626-15';
+const DATA_VERSION = '20260701-13';
 
 const state = {
   seeds: {},
@@ -7,6 +7,8 @@ const state = {
   result: null,
   chartVisibility: { growth: true, final: true },
   trendVisibility: { growth: true, avg10: true, avg20: true, avg50: true, avg100: true },
+  buffExpectationVisibility: { exp10: true, exp20: true, exp50: true, exp100: true },
+  buffVisibility: { buff1: true, buff2: true, buff3: true, buff4: true, buff5: true },
 };
 
 const els = {};
@@ -91,6 +93,79 @@ function evaluateGrowthFormula(formula, x) {
   if (!Number.isFinite(result)) throw new Error('基础增长公式结果无效。请检查公式写法，当前关卡：' + x);
   return result;
 }
+
+function parseOptionalPositiveNumber(value) {
+  if (value === null || value === undefined) return null;
+  const text = String(value).trim();
+  if (!text) return null;
+  const n = Number(text);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+function applyGrowthCap(value, cap) {
+  const limit = parseOptionalPositiveNumber(cap);
+  return limit === null ? value : Math.min(value, limit);
+}
+
+function getDefaultDifficultyPresentation(projectName) {
+  const isSh01 = String(projectName || '').toUpperCase() === 'SH01';
+  return {
+    noItemCoeff: isSh01 ? 5.5 : 1,
+    comprehensiveCoeff: isSh01 ? 7.5 : 1,
+  };
+}
+
+function getDifficultyPresentation(config) {
+  const presentation = config?.difficultyPresentation || {};
+  const defaults = getDefaultDifficultyPresentation(config?.meta?.projectName);
+  const mode = presentation.mode || 'bare';
+  if (mode === 'bare') {
+    return { mode: 'bare', coeff: null, defaults };
+  }
+  const rawCoeff = mode === 'noItem' ? presentation.noItemCoeff : presentation.comprehensiveCoeff;
+  const coeff = parseOptionalPositiveNumber(rawCoeff)
+    ?? (mode === 'noItem' ? defaults.noItemCoeff : defaults.comprehensiveCoeff);
+  return { mode, coeff, defaults };
+}
+function getDifficultyPresentationLabel(mode) {
+  if (mode === 'noItem') return '无道具难度';
+  if (mode === 'comprehensive') return '综合难度';
+  return '裸打难度';
+}
+
+function resolveDisplayedDifficulty(bareDifficulty, config) {
+  const presentation = getDifficultyPresentation(config);
+  if (presentation.mode === 'bare') return bareDifficulty;
+  const converted = 1 + ((bareDifficulty - 1) / presentation.coeff);
+  return applyRounding(converted, config.rounding);
+}
+
+function getDifficultyPresentationSummary(config) {
+  const presentation = getDifficultyPresentation(config);
+  const label = getDifficultyPresentationLabel(presentation.mode);
+  if (presentation.mode === 'bare') return { ...presentation, label, summary: label };
+  const coeffKey = presentation.mode === 'noItem' ? 'a' : 'b';
+  return {
+    ...presentation,
+    label,
+    coeffKey,
+    summary: `${label}（${coeffKey}=${presentation.coeff.toFixed(2)}）`,
+  };
+}
+
+function syncDifficultyPresentationControls() {
+  const presentation = getDifficultyPresentation(state.config);
+  if (els.difficultyPresentationMode) els.difficultyPresentationMode.value = presentation.mode;
+  if (els.noItemCoeff) els.noItemCoeff.disabled = false;
+  if (els.comprehensiveCoeff) els.comprehensiveCoeff.disabled = false;
+}
+
+function refreshDifficultyPresentationCopy() {
+  const summary = getDifficultyPresentationSummary(state.config);
+  if (els.finalDifficultyHeader) els.finalDifficultyHeader.textContent = summary.label;
+  if (els.finalDifficultyLegendText) els.finalDifficultyLegendText.textContent = summary.label;
+}
+
 function getCycleFactor(levelId, cycle) {
   const length = Math.max(1, Math.round(cycle.length));
   const values = cycle.values || [];
@@ -124,6 +199,21 @@ function rollingAverage(values, windowSize) {
   return out;
 }
 
+function rollingSum(values, windowSize) {
+  const out = new Array(values.length).fill(null);
+  let sum = 0;
+  for (let i = 0; i < values.length; i += 1) {
+    const current = Number.isFinite(values[i]) ? values[i] : 0;
+    sum += current;
+    if (i >= windowSize) {
+      const dropped = Number.isFinite(values[i - windowSize]) ? values[i - windowSize] : 0;
+      sum -= dropped;
+    }
+    out[i] = Number.isFinite(values[i]) ? sum : null;
+  }
+  return out;
+}
+
 function normalizeWeights(weights) {
   const raw = weights.map((v) => Math.max(0, num(v, 0)));
   const total = raw.reduce((a, b) => a + b, 0);
@@ -143,12 +233,18 @@ function buildManualOverrideMap(overrides) {
   return map;
 }
 
+function passProbability(difficulty, coeff, itemUseRate = 0) {
+  const raw = 1 / Math.max(0.001, ((Math.max(1, difficulty) - 1) * coeff) + 1);
+  return Math.min(1, Math.max(0, raw + itemUseRate - itemUseRate * raw));
+}
+
 function computeModel(config) {
   const levelCount = Math.max(1, Math.round(num(config.levelCount, 300)));
   const guideSet = levelSet(config.specialRules.guideLevels || []);
   const coinSet = levelSet(config.specialRules.coinLevels || []);
   const overrideMap = buildManualOverrideMap(config.manualOverrides || []);
   const weights = normalizeWeights(config.buffModel.weights || []);
+  const growthCap = config.growth?.cap;
   const decay = (config.buffModel.decay || []).map((v, idx) => {
     if (v === null || v === undefined || Number.isNaN(Number(v))) {
       return Math.max(0, 1 - idx * 0.08);
@@ -158,8 +254,14 @@ function computeModel(config) {
 
   const rows = [];
   for (let levelId = 1; levelId <= levelCount; levelId += 1) {
-    const baseGrowth = evaluateGrowthFormula(config.growth.formulaNumerator || buildGrowthFormula(config.growth), levelId);
-    const growth = evaluateGrowthFormula(buildGrowthFormula(config.growth), levelId);
+    const growthNumerator = evaluateGrowthFormula(
+      config.growth.formulaNumerator || buildGrowthFormula(config.growth),
+      levelId,
+    );
+    const cappedNumerator = applyGrowthCap(growthNumerator, growthCap);
+    const growthDenominator = num(config.growth.formulaDenominator, 1) || 1;
+    const baseGrowth = cappedNumerator / growthDenominator;
+    const growth = baseGrowth;
     const cycleFactor = getCycleFactor(levelId, config.cycle);
     const cycleValue = growth * cycleFactor;
 
@@ -190,22 +292,26 @@ function computeModel(config) {
       return sum + (((adjusted - 1) * coeff) + 1) * weight;
     }, 0));
 
-    const finalDifficulty = applyRounding(adjusted, config.rounding);
+        const bareDifficulty = applyRounding(adjusted, config.rounding);
+    const finalDifficulty = resolveDisplayedDifficulty(bareDifficulty, config);
 
     rows.push({
       levelId,
       growth: baseGrowth,
-      formulaGrowth: growth,
+      formulaGrowth: cappedNumerator,
+      growthNumerator,
+      cappedNumerator,
+      growthDenominator,
       cycleFactor,
       cycleValue,
       adjusted,
       buffed,
+      bareDifficulty,
       finalDifficulty,
       isGuide: guideSet.has(levelId),
       isCoin: coinSet.has(levelId),
     });
   }
-
   const finalSeries = rows.map((row) => row.finalDifficulty);
   const avg10 = rollingAverage(finalSeries, 10);
   const avg20 = rollingAverage(finalSeries, 20);
@@ -213,6 +319,9 @@ function computeModel(config) {
   const avg100 = rollingAverage(finalSeries, 100);
   const fullBuffBaseShare = Math.min(1, Math.max(0, num(config.buffModel.fullBuffBaseShare, 0.1)));
   const fullBuffProbability = rows.map((row, idx) => Math.min(1, fullBuffBaseShare + Math.max(0, row.buffed - 1) / 10 + idx / Math.max(200, rows.length * 2)));
+  const itemUseRate = Math.min(1, Math.max(0, num(config.buffModel.fullBuffItemUseRate, 0)));
+  const buffStartLevel = Math.max(1, Math.round(num(config.specialRules.buffStartLevel, 31)));
+  const theoreticalRows = [];
 
   rows.forEach((row, idx) => {
     row.avg10 = avg10[idx];
@@ -220,6 +329,52 @@ function computeModel(config) {
     row.avg50 = avg50[idx];
     row.avg100 = avg100[idx];
     row.fullBuffProbability = fullBuffProbability[idx];
+
+    if (row.levelId < buffStartLevel) {
+      const fail0 = row.levelId === buffStartLevel - 1 ? 1 : 0;
+      const buffCounts = [0, 0, 0, 0, 0, 0];
+      theoreticalRows.push({ fail0, buffCounts });
+      row.theoreticalZeroBuffRate = fail0;
+      row.theoreticalBuffDistribution = [fail0, 0, 0, 0, 0, 0];
+      row.theoreticalFirstBuffDistribution = [0, 0, 0, 0, 0];
+      return;
+    }
+
+    const prev = theoreticalRows[idx - 1] || { fail0: 1, buffCounts: [1, 0, 0, 0, 0, 0] };
+    const prevDifficulty = rows[idx - 1]?.finalDifficulty ?? row.finalDifficulty;
+    const currentDifficulty = row.finalDifficulty;
+    const prevPass = decay.map((coeff, buffIndex) => passProbability(prevDifficulty, coeff, buffIndex === 5 ? itemUseRate : 0));
+    const currentPass = decay.map((coeff, buffIndex) => passProbability(currentDifficulty, coeff, buffIndex === 5 ? itemUseRate : 0));
+    const buffCounts = [
+      0,
+      prev.fail0,
+      prev.buffCounts[1] * prevPass[1],
+      prev.buffCounts[2] * prevPass[2],
+      prev.buffCounts[3] * prevPass[3],
+      (prev.buffCounts[4] * prevPass[4]) + (prev.buffCounts[5] * prevPass[5]),
+    ];
+    const fail0 = buffCounts[1] * (1 - currentPass[1])
+      + buffCounts[2] * (1 - currentPass[2])
+      + buffCounts[3] * (1 - currentPass[3])
+      + buffCounts[4] * (1 - currentPass[4])
+      + buffCounts[5] * (1 - currentPass[5]);
+    buffCounts[0] = fail0;
+    theoreticalRows.push({ fail0, buffCounts });
+    row.theoreticalZeroBuffRate = fail0;
+    row.theoreticalBuffDistribution = buffCounts;
+    row.theoreticalFirstBuffDistribution = buffCounts.slice(1);
+  });
+
+  const fullBuffFirstRates = rows.map((row) => (row.levelId < buffStartLevel ? null : (row.theoreticalFirstBuffDistribution?.[4] || 0)));
+  const fullBuffExpected10 = rollingSum(fullBuffFirstRates, 10);
+  const fullBuffExpected20 = rollingSum(fullBuffFirstRates, 20);
+  const fullBuffExpected50 = rollingSum(fullBuffFirstRates, 50);
+  const fullBuffExpected100 = rollingSum(fullBuffFirstRates, 100);
+  rows.forEach((row, idx) => {
+    row.fullBuffExpected10 = fullBuffExpected10[idx];
+    row.fullBuffExpected20 = fullBuffExpected20[idx];
+    row.fullBuffExpected50 = fullBuffExpected50[idx];
+    row.fullBuffExpected100 = fullBuffExpected100[idx];
   });
 
   return { rows, avg10, avg20, avg50, avg100 };
@@ -231,12 +386,25 @@ function $(id) {
 
 function initEls() {
   [
-    'dataSource','resetBtn','saveBtn','exportBtn','levelCount','growthFormulaNumerator','growthFormulaDenominator','cycleLength','cycleValues',
+    'dataSource','resetBtn','saveBtn','exportBtn','levelCount','growthFormulaNumerator','growthFormulaDenominator','growthCap','cycleLength','cycleValues',
+    'difficultyPresentationMode','noItemCoeff','comprehensiveCoeff',
     'guideDifficulty','coinDifficulty','tailCapMax','tailCapWindow','tailCapEnabled','streakEnabled','streakExtraDefault','guideLevels',
-    'coinLevels','buffGrid','halfStepThreshold','integerThreshold','projectTitle','heroStats',
-    'focusStart','focusEnd','focusTable','overrideTable','curveCanvas','trendCanvas','protocolWarning',
-    'runtimeWarning','runtimeWarningText','showGrowth','showFinal','showTrendGrowth','showAvg10','showAvg20','showAvg50','showAvg100','exportFocusBtn','cycleAverageValue'
+    'coinLevels','buffStartLevel','buffGrid','halfStepThreshold','integerThreshold','projectTitle','heroStats',
+    'focusStart','focusEnd','focusTable','overrideTable','curveCanvas','trendCanvas','buffExpectationCanvas','protocolWarning',
+    'runtimeWarning','runtimeWarningText','showGrowth','showFinal','showTrendGrowth','showAvg10','showAvg20','showAvg50','showAvg100',
+    'showBuffExpected10','showBuffExpected20','showBuffExpected50','showBuffExpected100',
+    'showBuff1','showBuff2','showBuff3','showBuff4','showBuff5','buffDistributionCanvas','exportFocusBtn','cycleAverageValue',
+    'finalDifficultyHeader','finalDifficultyLegendText'
   ].forEach((id) => { els[id] = $(id); });
+}
+
+function preventNumberArrowStep(event) {
+  const target = event.target;
+  if (!(target instanceof HTMLInputElement)) return;
+  if (target.type !== "number") return;
+  if (event.key === "ArrowUp" || event.key === "ArrowDown") {
+    event.preventDefault();
+  }
 }
 
 function savedConfigKey(key = state.currentKey) {
@@ -276,13 +444,20 @@ function clearSavedConfig(key = state.currentKey) {
 function cloneConfigForKey(key) {
   return deepClone(loadSavedConfig(key) || state.seeds[key]);
 }
+
 function configToForm() {
   const c = state.config;
+  const defaults = getDefaultDifficultyPresentation(c.meta?.projectName);
+  const presentation = c.difficultyPresentation || defaults;
   els.levelCount.value = c.levelCount;
   const growthParts = splitGrowthFormula(c.growth.formula);
   els.growthFormulaNumerator.value = c.growth.formulaNumerator ?? growthParts.numerator;
   els.growthFormulaDenominator.value = c.growth.formulaDenominator ?? growthParts.denominator;
+  els.growthCap.value = c.growth.cap ?? '';
   els.cycleLength.value = c.cycle.length;
+  if (els.difficultyPresentationMode) els.difficultyPresentationMode.value = presentation.mode || 'bare';
+  if (els.noItemCoeff) els.noItemCoeff.value = presentation.noItemCoeff ?? defaults.noItemCoeff;
+  if (els.comprehensiveCoeff) els.comprehensiveCoeff.value = presentation.comprehensiveCoeff ?? defaults.comprehensiveCoeff;
   els.guideDifficulty.value = c.specialRules.guideDifficulty;
   els.coinDifficulty.value = c.specialRules.coinDifficulty;
   els.tailCapMax.value = c.specialRules.tailCapMax;
@@ -290,6 +465,7 @@ function configToForm() {
   els.tailCapEnabled.checked = !!c.specialRules.tailCapEnabled;
   els.streakEnabled.checked = !!c.specialRules.streakEnabled;
   els.streakExtraDefault.value = c.specialRules.streakExtraDefault ?? 1.1;
+  els.buffStartLevel.value = c.specialRules.buffStartLevel ?? 31;
   els.guideLevels.value = (c.specialRules.guideLevels || []).join(', ');
   els.coinLevels.value = (c.specialRules.coinLevels || []).join(', ');
   els.halfStepThreshold.value = c.rounding.halfStepThreshold;
@@ -298,6 +474,8 @@ function configToForm() {
   els.focusEnd.value = Math.min(c.levelCount, 2200);
   if (els.showGrowth) els.showGrowth.checked = !!state.chartVisibility.growth;
   if (els.showFinal) els.showFinal.checked = !!state.chartVisibility.final;
+  syncDifficultyPresentationControls();
+  refreshDifficultyPresentationCopy();
   syncLegendState();
   buildCycleValueInputs();
   buildBuffInputs();
@@ -310,7 +488,14 @@ function updateConfigFromForm() {
   c.growth.formulaNumerator = els.growthFormulaNumerator.value.trim() || c.growth.formulaNumerator || '';
   c.growth.formulaDenominator = String(num(els.growthFormulaDenominator.value, num(c.growth.formulaDenominator, 1))).trim() || String(c.growth.formulaDenominator || 1);
   c.growth.formula = buildGrowthFormula(c.growth);
+  c.growth.cap = parseOptionalPositiveNumber(els.growthCap.value);
   c.cycle.length = Math.max(1, Math.round(num(els.cycleLength.value, c.cycle.length)));
+  c.difficultyPresentation = {
+    version: 1,
+    mode: els.difficultyPresentationMode?.value || 'bare',
+    noItemCoeff: parseOptionalPositiveNumber(els.noItemCoeff?.value),
+    comprehensiveCoeff: parseOptionalPositiveNumber(els.comprehensiveCoeff?.value),
+  };
   c.specialRules.guideDifficulty = num(els.guideDifficulty.value, c.specialRules.guideDifficulty);
   c.specialRules.coinDifficulty = num(els.coinDifficulty.value, c.specialRules.coinDifficulty);
   c.specialRules.tailCapMax = num(els.tailCapMax.value, c.specialRules.tailCapMax);
@@ -318,6 +503,7 @@ function updateConfigFromForm() {
   c.specialRules.tailCapEnabled = els.tailCapEnabled.checked;
   c.specialRules.streakEnabled = els.streakEnabled.checked;
   c.specialRules.streakExtraDefault = num(els.streakExtraDefault.value, c.specialRules.streakExtraDefault ?? 1.1);
+  c.specialRules.buffStartLevel = Math.max(1, Math.round(num(els.buffStartLevel.value, c.specialRules.buffStartLevel ?? 31)));
   c.specialRules.guideLevels = parseLevelList(els.guideLevels.value);
   c.specialRules.coinLevels = parseLevelList(els.coinLevels.value);
   c.rounding.halfStepThreshold = num(els.halfStepThreshold.value, c.rounding.halfStepThreshold);
@@ -412,7 +598,9 @@ function renderHero() {
   const avg = finalSeries.reduce((a, b) => a + b, 0) / finalSeries.length;
   const max = Math.max(...finalSeries);
   const min = Math.min(...finalSeries);
+  const summary = getDifficultyPresentationSummary(state.config);
   els.heroStats.innerHTML = `
+    <span class="pill">当前口径 ${summary.summary}</span>
     <span class="pill">平均难度 ${avg.toFixed(2)}</span>
     <span class="pill">最低 ${min.toFixed(2)}</span>
     <span class="pill">最高 ${max.toFixed(2)}</span>
@@ -421,19 +609,26 @@ function renderHero() {
 
 function getFocusRange() {
   const total = state.result.rows.length;
-  let start = Math.max(1, Math.round(num(els.focusStart.value, 1)));
-  let end = Math.max(1, Math.round(num(els.focusEnd.value, Math.min(total, start + 19))));
-  start = Math.min(start, total);
-  end = Math.min(end, total);
-  if (end < start) end = start;
-  els.focusStart.value = start;
-  els.focusEnd.value = end;
+  const rawStart = els.focusStart.value.trim();
+  const rawEnd = els.focusEnd.value.trim();
+  if (rawStart === '' || rawEnd === '') return null;
+  const start = Math.round(Number(rawStart));
+  const end = Math.round(Number(rawEnd));
+  if (!Number.isFinite(start) || !Number.isFinite(end)) return null;
+  if (start < 1 || end < 1) return null;
+  if (start > end) return null;
+  if (start > total) return null;
   return { start, end };
 }
 
 function focusRowsData() {
   const range = getFocusRange();
+  if (!range) return [];
   return state.result.rows.slice(range.start - 1, range.end);
+}
+
+function formatPercent(value) {
+  return Number.isFinite(value) ? `${(value * 100).toFixed(2)}%` : '-';
 }
 
 function renderFocusTable() {
@@ -449,8 +644,95 @@ function renderFocusTable() {
       <td>${row.avg20.toFixed(2)}</td>
       <td>${row.avg50.toFixed(2)}</td>
       <td>${row.avg100.toFixed(2)}</td>
+      <td>${formatPercent(row.theoreticalZeroBuffRate)}</td>
+      <td>${formatPercent(row.theoreticalFirstBuffDistribution?.[0])}</td>
+      <td>${formatPercent(row.theoreticalFirstBuffDistribution?.[1])}</td>
+      <td>${formatPercent(row.theoreticalFirstBuffDistribution?.[2])}</td>
+      <td>${formatPercent(row.theoreticalFirstBuffDistribution?.[3])}</td>
+      <td>${formatPercent(row.theoreticalFirstBuffDistribution?.[4])}</td>
     </tr>
   `).join('');
+}
+
+function drawBuffDistributionBars(canvas, rows) {
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const width = canvas.width;
+  const height = canvas.height;
+  const padding = { top: 20, right: 22, bottom: 46, left: 48 };
+  const colors = ['#8fcf00', '#f04d44', '#ffd64d', '#9a45a0', '#55b878'];
+  const names = ['\u9996\u95ef1\u7ea7buff\u7387', '\u9996\u95ef2\u7ea7buff\u7387', '\u9996\u95ef3\u7ea7buff\u7387', '\u9996\u95ef4\u7ea7buff\u7387', '\u9996\u95ef5\u7ea7buff\u7387'];
+  const visible = names.map((_, idx) => state.buffVisibility[`buff${idx + 1}`] !== false);
+  hideChartTooltip();
+  ctx.clearRect(0, 0, width, height);
+  canvas.__chartMeta = null;
+  window.__chartMetaById = window.__chartMetaById || {};
+  window.__chartMetaById[canvas.id] = null;
+  if (!rows.length || !visible.some(Boolean)) return;
+
+  const usableW = width - padding.left - padding.right;
+  const usableH = height - padding.top - padding.bottom;
+  const pointCount = rows.length;
+  const gap = pointCount > 80 ? 1 : 2;
+  const barW = Math.max(1, (usableW / pointCount) - gap);
+  const y = (value) => padding.top + usableH - value * usableH;
+
+  ctx.strokeStyle = '#d7e0e8';
+  ctx.lineWidth = 1;
+  ctx.fillStyle = '#66788a';
+  ctx.font = '12px Arial';
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'middle';
+  for (let i = 0; i <= 5; i += 1) {
+    const value = i / 5;
+    const py = y(value);
+    ctx.beginPath();
+    ctx.moveTo(padding.left, py);
+    ctx.lineTo(width - padding.right, py);
+    ctx.stroke();
+    ctx.fillText(`${Math.round(value * 100)}%`, padding.left - 8, py);
+  }
+
+  rows.forEach((row, index) => {
+    const distribution = row.theoreticalFirstBuffDistribution || [0, 0, 0, 0, 0];
+    let stackTop = 0;
+    const x = padding.left + (index / pointCount) * usableW + gap / 2;
+    distribution.forEach((value, buffIndex) => {
+      if (!visible[buffIndex]) return;
+      const share = Math.max(0, value);
+      const yTop = y(stackTop + share);
+      const yBottom = y(stackTop);
+      ctx.fillStyle = colors[buffIndex];
+      ctx.fillRect(x, yTop, barW, Math.max(1, yBottom - yTop));
+      stackTop += share;
+    });
+  });
+
+  const levelIds = rows.map((row) => row.levelId);
+  const desiredTicks = Math.min(14, Math.max(2, Math.floor(usableW / 72)));
+  const tickEvery = Math.max(1, Math.ceil(pointCount / desiredTicks));
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  ctx.fillStyle = '#66788a';
+  for (let index = 0; index < pointCount; index += tickEvery) {
+    const px = padding.left + (index / Math.max(1, pointCount - 1)) * usableW;
+    ctx.strokeStyle = '#edf2f6';
+    ctx.beginPath();
+    ctx.moveTo(px, padding.top);
+    ctx.lineTo(px, height - padding.bottom);
+    ctx.stroke();
+    ctx.fillStyle = '#66788a';
+    ctx.fillText(String(levelIds[index]), px, height - padding.bottom + 12);
+  }
+  if ((pointCount - 1) % tickEvery !== 0) {
+    const px = width - padding.right;
+    ctx.fillText(String(levelIds[pointCount - 1]), px, height - padding.bottom + 12);
+  }
+
+  const visibleEntries = names.map((name, idx) => ({ name, color: colors[idx], visible: visible[idx], decimals: 1 }));
+  const meta = { type: 'stackedPercent', padding, pointCount, levelIds, rows, visibleEntries };
+  canvas.__chartMeta = meta;
+  window.__chartMetaById[canvas.id] = meta;
 }
 
 function drawLines(canvas, seriesEntries, options = {}) {
@@ -476,7 +758,8 @@ function drawLines(canvas, seriesEntries, options = {}) {
   const levelIds = options.levelIds || Array.from({ length: pointCount }, (_, idx) => idx + 1);
 
   function x(i) { return padding.left + (i / Math.max(1, pointCount - 1)) * usableW; }
-  function y(v) { return padding.top + usableH - ((v - min) / Math.max(0.001, max - min)) * usableH; }
+
+function y(v) { return padding.top + usableH - ((v - min) / Math.max(0.001, max - min)) * usableH; }
 
   ctx.strokeStyle = '#d7e0e8';
   ctx.lineWidth = 1;
@@ -516,14 +799,16 @@ function drawLines(canvas, seriesEntries, options = {}) {
     ctx.beginPath();
     ctx.lineWidth = entry.lineWidth || 2;
     ctx.strokeStyle = entry.color;
+    let hasPoint = false;
     dataLoop: for (let index = 0; index < entry.data.length; index += 1) {
       const value = entry.data[index];
       if (!Number.isFinite(value)) continue dataLoop;
       const px = x(index);
       const py = y(value);
-      if (index === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+      if (!hasPoint) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+      hasPoint = true;
     }
-    ctx.stroke();
+    if (hasPoint) ctx.stroke();
   });
 
   ctx.textAlign = 'left';
@@ -577,7 +862,7 @@ function setupChartTooltip(canvas) {
     const scaleY = canvas.height / rect.height;
     const px = (event.clientX - rect.left) * scaleX;
     const py = (event.clientY - rect.top) * scaleY;
-    const { padding, min, max, pointCount, levelIds, visibleEntries } = meta;
+    const { padding, pointCount, levelIds, visibleEntries } = meta;
     const usableW = canvas.width - padding.left - padding.right;
     const usableH = canvas.height - padding.top - padding.bottom;
     const inPlot = px >= padding.left && px <= canvas.width - padding.right && py >= padding.top && py <= canvas.height - padding.bottom;
@@ -589,9 +874,13 @@ function setupChartTooltip(canvas) {
     const rawIndex = ((px - padding.left) / Math.max(1, usableW)) * Math.max(1, pointCount - 1);
     const index = Math.min(pointCount - 1, Math.max(0, Math.round(rawIndex)));
 
-    const rows = visibleEntries
-      .map((entry) => ({ entry, value: entry.data[index] }))
-      .filter((item) => Number.isFinite(item.value));
+    const rows = meta.type === 'stackedPercent'
+      ? visibleEntries
+        .map((entry, buffIndex) => ({ entry, value: meta.rows[index]?.theoreticalFirstBuffDistribution?.[buffIndex] * 100 }))
+        .filter((item) => item.entry.visible !== false && Number.isFinite(item.value))
+      : visibleEntries
+        .map((entry) => ({ entry, value: entry.data[index] }))
+        .filter((item) => Number.isFinite(item.value));
 
     if (!rows.length) {
       hideChartTooltip();
@@ -614,28 +903,45 @@ function setupChartTooltip(canvas) {
 
 function renderChart() {
   const rows = state.result.rows;
+  const finalLabel = getDifficultyPresentationLabel(getDifficultyPresentation(state.config).mode);
   const seriesEntries = [
-    { key: 'final', name: '最终输出', data: rows.map((r) => r.finalDifficulty), color: '#2f8f72', visible: state.chartVisibility.final, lineWidth: 2.8, decimals: 1 },
-    { key: 'growth', name: '基础增长', data: rows.map((r) => r.growth), color: '#d7a300', visible: state.chartVisibility.growth, lineWidth: 2.2 },
+    { key: 'final', name: finalLabel, data: rows.map((r) => r.finalDifficulty), color: '#2f8f72', visible: state.chartVisibility.final, lineWidth: 2.8, decimals: 1 },
+    { key: 'growth', name: '基础增长公式', data: rows.map((r) => r.formulaGrowth), color: '#d7a300', visible: state.chartVisibility.growth, lineWidth: 2.2 },
   ];
   drawLines(els.curveCanvas, seriesEntries, { levelIds: rows.map((r) => r.levelId) });
 }
 
+function renderBuffDistributionChart() {
+  const rows = focusRowsData();
+  drawBuffDistributionBars(els.buffDistributionCanvas, rows);
+}
+
 function renderTrendChart() {
   const rows = focusRowsData();
-  if (!rows.length) return;
   const seriesEntries = [
     { name: '近10关', data: rows.map((r) => r.avg10), color: '#cf4f67', lineWidth: 2, visible: state.trendVisibility.avg10, decimals: 2 },
     { name: '近20关', data: rows.map((r) => r.avg20), color: '#1769aa', lineWidth: 2, visible: state.trendVisibility.avg20, decimals: 2 },
     { name: '近50关', data: rows.map((r) => r.avg50), color: '#2f8f72', lineWidth: 2, visible: state.trendVisibility.avg50, decimals: 2 },
     { name: '近100关', data: rows.map((r) => r.avg100), color: '#8a63d2', lineWidth: 2, visible: state.trendVisibility.avg100, decimals: 2 },
-    { name: '基础增长曲线', data: rows.map((r) => r.growth), color: '#d7a300', lineWidth: 2.2, visible: state.trendVisibility.growth, decimals: 2 },
+    { name: '基础增长公式曲线', data: rows.map((r) => r.formulaGrowth), color: '#d7a300', lineWidth: 2.2, visible: state.trendVisibility.growth, decimals: 2 },
   ];
   drawLines(els.trendCanvas, seriesEntries, { levelIds: rows.map((r) => r.levelId) });
 }
 
+function renderBuffExpectationChart() {
+  if (!els.buffExpectationCanvas) return;
+  const rows = focusRowsData();
+  const seriesEntries = [
+    { name: '近10关', data: rows.map((r) => r.fullBuffExpected10), color: '#cf4f67', lineWidth: 2, visible: state.buffExpectationVisibility.exp10, decimals: 2 },
+    { name: '近20关', data: rows.map((r) => r.fullBuffExpected20), color: '#1769aa', lineWidth: 2, visible: state.buffExpectationVisibility.exp20, decimals: 2 },
+    { name: '近50关', data: rows.map((r) => r.fullBuffExpected50), color: '#2f8f72', lineWidth: 2, visible: state.buffExpectationVisibility.exp50, decimals: 2 },
+    { name: '近100关', data: rows.map((r) => r.fullBuffExpected100), color: '#8a63d2', lineWidth: 2, visible: state.buffExpectationVisibility.exp100, decimals: 2 },
+  ];
+  drawLines(els.buffExpectationCanvas, seriesEntries, { levelIds: rows.map((r) => r.levelId), padding: { top: 20, right: 24, bottom: 42, left: 44 } });
+}
+
 function syncLegendState() {
-  ['showGrowth', 'showFinal', 'showTrendGrowth', 'showAvg10', 'showAvg20', 'showAvg50', 'showAvg100'].forEach((id) => {
+  ['showGrowth', 'showFinal', 'showTrendGrowth', 'showAvg10', 'showAvg20', 'showAvg50', 'showAvg100', 'showBuffExpected10', 'showBuffExpected20', 'showBuffExpected50', 'showBuffExpected100', 'showBuff1', 'showBuff2', 'showBuff3', 'showBuff4', 'showBuff5'].forEach((id) => {
     const input = els[id];
     if (!input) return;
     input.closest('.legend-toggle')?.classList.toggle('off', !input.checked);
@@ -658,12 +964,16 @@ function recompute() {
     updateConfigFromForm();
     state.result = computeModel(state.config);
     hideRuntimeWarning();
+    refreshDifficultyPresentationCopy();
     renderHero();
     renderFocusTable();
     renderChart();
+    renderBuffDistributionChart();
     renderTrendChart();
+    renderBuffExpectationChart();
     syncLegendState();
     syncSpecialRuleControls();
+    syncDifficultyPresentationControls();
     ['growthFormulaNumerator','growthFormulaDenominator'].forEach((id) => {
       if (els[id]) els[id].style.borderColor = '';
     });
@@ -679,7 +989,9 @@ function recompute() {
 
 function exportFocusTable() {
   const rows = focusRowsData();
-  const header = ['关卡', '基础增长', '周期修正', '特殊关修正', '最终难度', '近10关', '近20关', '近50关', '近100关'];
+  const range = getFocusRange();
+  const finalLabel = getDifficultyPresentationLabel(getDifficultyPresentation(state.config).mode);
+  const header = ['关卡', '基础增长值', '周期修正', '特殊关修正', finalLabel, '近10关', '近20关', '近50关', '近100关', '首输0buff率', '首闯1级buff率', '首闯2级buff率', '首闯3级buff率', '首闯4级buff率', '首闯5级buff率'];
   const lines = [header.join(',')].concat(rows.map((row) => [
     row.levelId,
     row.growth.toFixed(2),
@@ -690,25 +1002,34 @@ function exportFocusTable() {
     row.avg20.toFixed(2),
     row.avg50.toFixed(2),
     row.avg100.toFixed(2),
+    formatPercent(row.theoreticalZeroBuffRate),
+    formatPercent(row.theoreticalFirstBuffDistribution?.[0]),
+    formatPercent(row.theoreticalFirstBuffDistribution?.[1]),
+    formatPercent(row.theoreticalFirstBuffDistribution?.[2]),
+    formatPercent(row.theoreticalFirstBuffDistribution?.[3]),
+    formatPercent(row.theoreticalFirstBuffDistribution?.[4]),
   ].join(',')));
   const blob = new Blob(['\ufeff' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  const range = getFocusRange();
+  if (!range) {
+    URL.revokeObjectURL(url);
+    return;
+  }
   a.href = url;
-  a.download = `difficulty-focus-${range.start}-${range.end}.csv`;
+  a.download = 'difficulty-focus-' + range.start + '-' + range.end + '.csv';
   a.click();
   URL.revokeObjectURL(url);
 }
 
 function bindBaseInputs() {
   [
-    'levelCount','growthFormulaNumerator','growthFormulaDenominator','cycleLength','guideDifficulty','coinDifficulty','tailCapMax',
-    'tailCapWindow','tailCapEnabled','streakEnabled','guideLevels','coinLevels','halfStepThreshold',
+    'levelCount','growthFormulaNumerator','growthFormulaDenominator','growthCap','cycleLength','difficultyPresentationMode','noItemCoeff','comprehensiveCoeff',
+    'guideDifficulty','coinDifficulty','tailCapMax','tailCapWindow','tailCapEnabled','streakEnabled','buffStartLevel','guideLevels','coinLevels','halfStepThreshold',
     'integerThreshold','focusStart','focusEnd'
   ].forEach((id) => {
     if (!els[id]) return;
-    els[id].addEventListener('input', () => {
+    const handler = () => {
       if (id === 'cycleLength') buildCycleValueInputs();
       if (id === 'streakEnabled') {
         if (els.streakEnabled.checked && num(els.streakExtraDefault?.value, 1) === 1) {
@@ -716,8 +1037,12 @@ function bindBaseInputs() {
         }
         syncSpecialRuleControls();
       }
+      if (id === 'difficultyPresentationMode' || id === 'noItemCoeff' || id === 'comprehensiveCoeff') {
+        syncDifficultyPresentationControls();
+      }
       recompute();
-    });
+    };
+    els[id].addEventListener(id === 'difficultyPresentationMode' ? 'change' : 'input', handler);
   });
 
   if (els.dataSource) els.dataSource.addEventListener('change', () => {
@@ -759,6 +1084,21 @@ function bindBaseInputs() {
   });
 
   [
+    ['showBuff1', 'buff1'],
+    ['showBuff2', 'buff2'],
+    ['showBuff3', 'buff3'],
+    ['showBuff4', 'buff4'],
+    ['showBuff5', 'buff5'],
+  ].forEach(([id, key]) => {
+    if (!els[id]) return;
+    els[id].addEventListener('change', () => {
+      state.buffVisibility[key] = els[id].checked;
+      syncLegendState();
+      renderBuffDistributionChart();
+    });
+  });
+
+  [
     ['showTrendGrowth', 'growth'],
     ['showAvg10', 'avg10'],
     ['showAvg20', 'avg20'],
@@ -770,6 +1110,20 @@ function bindBaseInputs() {
       state.trendVisibility[key] = els[id].checked;
       syncLegendState();
       renderTrendChart();
+    });
+  });
+
+  [
+    ['showBuffExpected10', 'exp10'],
+    ['showBuffExpected20', 'exp20'],
+    ['showBuffExpected50', 'exp50'],
+    ['showBuffExpected100', 'exp100'],
+  ].forEach(([id, key]) => {
+    if (!els[id]) return;
+    els[id].addEventListener('change', () => {
+      state.buffExpectationVisibility[key] = els[id].checked;
+      syncLegendState();
+      renderBuffExpectationChart();
     });
   });
 
@@ -794,6 +1148,7 @@ function updateProtocolWarning() {
 
 async function init() {
   initEls();
+  document.addEventListener("keydown", preventNumberArrowStep, true);
   const [referenceSeed, defaultSeed] = await Promise.all([
     loadJson('../../data/model_seed.json'),
     loadJson('../../data/project_seed_default.json'),
@@ -807,6 +1162,7 @@ async function init() {
     levelCount: 3000,
     growth: {
       formula: '((1.08 * ln(x + 78)) - 3.8) / 2',
+      cap: null,
     },
     rounding: referenceSeed.modelSeed?.rounding || defaultSeed.rounding,
     cycle: {
@@ -825,26 +1181,31 @@ async function init() {
       tailCapMax: 2,
       streakEnabled: !!referenceSeed.modelSeed?.streakEnabled,
       streakExtraDefault: 1.1,
+      buffStartLevel: 31,
     },
     buffModel: {
       weights: referenceSeed.modelSeed?.buffWeights || defaultSeed.buffModel.weights,
-      decay: [1, 0.92, 0.84, 0.78, 0.72, 0.66],
+      decay: [1, 0.6302319468, 0.4392866662, 0.3316306420, 0.1993753807, 0.0771788931],
       fullBuffBaseShare: 0.1,
     },
+    difficultyPresentation: getDefaultDifficultyPresentation('PopH5'),
     manualOverrides: (referenceSeed.manualOverrides || [])
       .filter((item) => item.targetDifficulty !== null && item.targetDifficulty !== undefined)
       .map((item) => ({ levelId: item.levelId, difficulty: item.targetDifficulty })),
   };
 
-  state.seeds.default = defaultSeed;
-  state.seeds.default.specialRules = { ...state.seeds.default.specialRules, streakExtraDefault: 1.1 };
+  state.seeds.default = deepClone(state.seeds.reference);
+  state.seeds.default.meta = { ...state.seeds.default.meta, projectName: 'SH01' };
+  state.seeds.default.difficultyPresentation = getDefaultDifficultyPresentation('SH01');
   state.config = cloneConfigForKey(state.currentKey);
   updateProtocolWarning();
   els.dataSource.value = state.currentKey;
   configToForm();
   bindBaseInputs();
   setupChartTooltip(els.curveCanvas);
+  setupChartTooltip(els.buffDistributionCanvas);
   setupChartTooltip(els.trendCanvas);
+  setupChartTooltip(els.buffExpectationCanvas);
   window.addEventListener('scroll', hideChartTooltip, true);
   window.addEventListener('blur', hideChartTooltip);
   document.addEventListener('mouseleave', hideChartTooltip);
@@ -854,3 +1215,4 @@ async function init() {
 init().catch((error) => {
   document.body.innerHTML = `<pre style="padding:24px;color:#b00020;white-space:pre-wrap;">初始化失败\n${error.message}</pre>`;
 });
+
