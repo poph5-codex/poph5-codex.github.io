@@ -1037,9 +1037,6 @@ function bindBaseInputs() {
         }
         syncSpecialRuleControls();
       }
-      if (id === 'difficultyPresentationMode' || id === 'noItemCoeff' || id === 'comprehensiveCoeff') {
-        syncDifficultyPresentationControls();
-      }
       recompute();
     };
     els[id].addEventListener(id === 'difficultyPresentationMode' ? 'change' : 'input', handler);
